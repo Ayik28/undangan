@@ -17,10 +17,9 @@
             overscroll-behavior-y: contain; 
         }
 
-        /* 🕹️ CASING KONSOL ARCADE UTAMA (DIPERBAIKI UNTUK CHROME HP) */
+        /* 🕹️ CASING KONSOL ARCADE UTAMA */
         .arcade-console {
             width: 100vw;
-            /* Menggunakan dvh agar dinamis mengikuti address bar Chrome */
             height: 100dvh; 
             max-width: 430px;  
             max-height: 820px;
@@ -33,7 +32,7 @@
             align-items: center;
             position: relative;
             box-sizing: border-box;
-            padding: 12px; /* Disesuaikan sedikit agar lebih aman */
+            padding: 12px; 
         }
 
         .console-header {
@@ -179,6 +178,7 @@
     let currentMusic = null;
     let phaserGameInstance = null;
     let globalActivePage = 1;
+    let isTransitioning = false; // Flag status penahan agar input tidak dobel selama transisi
 
     window.virtualController = {
         leftPressed: false,
@@ -206,20 +206,18 @@
         setVirtualInput('btn-action-b', 'actionBPressed');
     }, 500);
 
+    // --- MANAJEMEN TRANSISI ANTAR HALAMAN SECARA HALUS ---
     function bukaPage(pageNumber) {
         globalActivePage = pageNumber;
-        if (currentMusic) currentMusic.stop();
-        
-        if (phaserGameInstance) {
-            phaserGameInstance.destroy(true);
-            phaserGameInstance = null;
+        if (pageNumber === 1) {
+            if (currentMusic) currentMusic.stop();
+            if (phaserGameInstance) phaserGameInstance.destroy(true);
+            initLandingPage();
+        } 
+        else if (pageNumber === 2) {
+            // Pemicu transisi awan menutup sebelum memuat Game Mobil
+            isTransitioning = true;
         }
-
-        // Penambahan jeda aman agar Phaser membersihkan scene sebelumnya sebelum membuat scene baru
-        setTimeout(() => {
-            if (pageNumber === 1) initLandingPage();
-            else if (pageNumber === 2) initGameMobil();
-        }, 50);
     }
 
     window.onload = () => { bukaPage(1); };
@@ -228,6 +226,8 @@
     // 🌅 SCENE 1: LANDING PAGE
     // =========================================================================
     function initLandingPage() {
+        isTransitioning = false;
+        
         const configLanding = {
             type: Phaser.AUTO,
             width: 600, height: 800,
@@ -251,7 +251,6 @@
 
                     this.add.image(300, 400, 'custom_bg').setDisplaySize(600, 800);
 
-                    // Awan & Burung
                     this.clouds = this.physics.add.group();
                     for (let i = 0; i < 6; i++) {
                         this.clouds.create(i * 120, Phaser.Math.Between(40, 150), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
@@ -264,35 +263,44 @@
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(0.7);
                     this.tweens.add({ targets: this.sun, scale: { from: 0.68, to: 0.72 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    // Teks Kustomisasi Manual Pilihanmu (340, 380, 420)
-                    this.add.text(300, 340, "THE WEDDING OF", { 
-                        fontFamily: "'VT323'", 
-                        fontSize: "22px", 
-                        fill: "#ffb804" 
-                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(300, 340, "THE WEDDING OF", { fontFamily: "'VT323'", fontSize: "22px", fill: "#ffb804" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(300, 380, "Mar'ie & Haiyi", { fontFamily: "'Playfair Display'", fontSize: "38px", fill: "#ffffff", fontWeight: "bold" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { fontFamily: "'VT323'", fontSize: "20px", fill: "#ffb804" }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
 
-                    this.add.text(300, 380, "Mar'ie & Haiyi", { 
-                        fontFamily: "'Playfair Display'", 
-                        fontSize: "38px", 
-                        fill: "#ffffff", 
-                        fontWeight: "bold" 
-                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
-
-                    this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { 
-                        fontFamily: "'VT323'", 
-                        fontSize: "20px", 
-                        fill: "#ffb804" 
-                    }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
+                    // --- ☁️ INISIALISASI AWAN TIRAI TRANSISI (Ditaruh di depth tertinggi) ---
+                    this.tiraiKiri = this.add.image(-310, 400, 'cloud').setDisplaySize(650, 900).setAlpha(1).setDepth(100).setTint(0xffffff);
+                    this.tiraiKanan = this.add.image(910, 400, 'cloud').setDisplaySize(650, 900).setAlpha(1).setDepth(100).setTint(0xffffff);
                 },
-                // --- 🛠️ PERBAIKAN: MENAMBAHKAN KEMBALI FUNGSI UPDATE UNTUK MENANGKAP INPUT TOMBOL A ---
                 update: function() {
                     this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
                     this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
 
-                    // Deteksi klik pada tombol [A] untuk berpindah halaman ke Game Mobil
-                    if (window.virtualController.actionAPressed) {
-                        window.virtualController.actionAPressed = false; // Reset trigger input
-                        bukaPage(2);
+                    // Logika pemicu animasi tirai awan menutup
+                    if (window.virtualController.actionAPressed && !isTransitioning) {
+                        window.virtualController.actionAPressed = false;
+                        bukaPage(2); // Set status transitioning
+
+                        // Jalankan tween animasi awan bergerak ke tengah menutup layar
+                        this.tweens.add({
+                            targets: this.tiraiKiri,
+                            x: 160,
+                            duration: 800,
+                            ease: 'Power2'
+                        });
+
+                        this.tweens.add({
+                            targets: this.tiraiKanan,
+                            x: 440,
+                            duration: 800,
+                            ease: 'Power2',
+                            onComplete: () => {
+                                // Setelah layar tertutup rapat, hancurkan scene 1 dan panggil scene 2
+                                if (currentMusic) currentMusic.stop();
+                                phaserGameInstance.destroy(true);
+                                phaserGameInstance = null;
+                                initGameMobil();
+                            }
+                        });
                     }
                 }
             }
@@ -301,7 +309,7 @@
     }
 
     // =========================================================================
-    // 🏎️ SCENE 2: GAME MOBIL KLASIK
+    // 🏎️ SCENE 2: GAME MOBIL KLASIK WITH CLOUD TRANSITION OPENING
     // =========================================================================
     function initGameMobil() {
         const configMobil = {
@@ -313,6 +321,7 @@
                 preload: function() {
                     this.load.image('road', 'assets/jalan_raya.png'); 
                     this.load.image('player_car', 'assets/mobil_kamu.png'); 
+                    this.load.image('cloud', 'assets/awan.png'); // Pastikan awan dimuat ulang
                 },
                 create: function() {
                     this.road = this.add.tileSprite(300, 400, 600, 800, 'road');
@@ -320,10 +329,37 @@
                     this.player.setCollideWorldBounds(true);
 
                     this.cursors = this.input.keyboard.createCursorKeys();
-                    this.add.text(20, 20, "PAGE 2: JALAN RAYA MELAJU (3:4)", { fontFamily: "'VT323'", fontSize: "20px", fill: "#fff" });
+                    this.add.text(20, 20, "PAGE 2: JALAN RAYA MELAJU (3:4)", { fontFamily: "'VT323'", fontSize: "20px", fill: "#fff" }).setDepth(1);
+
+                    // --- ☁️ BUAT KEMBALI TIRAI AWAN DALAM KONDISI MENUTUP RAPAT ---
+                    this.tiraiKiri = this.add.image(160, 400, 'cloud').setDisplaySize(650, 900).setAlpha(1).setDepth(100);
+                    this.tiraiKanan = this.add.image(440, 400, 'cloud').setDisplaySize(650, 900).setAlpha(1).setDepth(100);
+
+                    // Jalankan tween animasi awan membuka kembali ke arah luar
+                    this.tweens.add({
+                        targets: this.tiraiKiri,
+                        x: -310,
+                        duration: 800,
+                        ease: 'Power2',
+                        delay: 200 // Beri jeda waktu tipis sebelum membuka
+                    });
+
+                    this.tweens.add({
+                        targets: this.tiraiKanan,
+                        x: 910,
+                        duration: 800,
+                        ease: 'Power2',
+                        delay: 200,
+                        onComplete: () => {
+                            isTransitioning = false; // Transisi selesai, tombol kemudi aktif penuh
+                        }
+                    });
                 },
                 update: function() {
-                    this.road.tilePositionY -= 6; 
+                    // Jalan raya melaju hanya boleh bergulung jika transisi pembukaan sudah selesai
+                    if (!isTransitioning) {
+                        this.road.tilePositionY -= 6; 
+                    }
 
                     if (this.cursors.left.isDown || window.virtualController.leftPressed) {
                         this.player.setVelocityX(-250);
