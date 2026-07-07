@@ -262,37 +262,31 @@
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(0.7);
                     this.tweens.add({ targets: this.sun, scale: { from: 0.68, to: 0.72 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    // 🎯 PERBAIKAN TOTAL: MERAPATKAN LINE SPACING & MENINGKATKAN JARAK AMAN BORDER
-                    // Teks 1: THE WEDDING OF (Digeser ke Y: 315)
-                    this.add.text(300, 315, "THE WEDDING OF", { 
+                    // =========================================================================
+                    // 🎯 ATUR MANUAL KOORDINAT Y (ANGKA KEDUA) UNTUK MERAPATKAN TEKS
+                    // =========================================================================
+                    
+                    // Teks 1: THE WEDDING OF (Ganti angka 320 untuk naik/turun)
+                    this.add.text(300, 340, "THE WEDDING OF", { 
                         fontFamily: "'VT323'", 
                         fontSize: "22px", 
                         fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // Teks 2: Mar'ie & Haiyi (Merapat ke Y: 365, font disesuaikan menjadi 38px)
-                    this.add.text(300, 365, "Mar'ie & Haiyi", { 
+                    // Teks 2: Mar'ie & Haiyi (Ganti angka 360 untuk mendekat ke teks atas)
+                    this.add.text(300, 380, "Mar'ie & Haiyi", { 
                         fontFamily: "'Playfair Display'", 
                         fontSize: "38px", 
                         fill: "#ffffff", 
                         fontWeight: "bold" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // Teks 3: INSTRUKSI MULAI (Merapat ke Y: 415)
-                    this.add.text(300, 415, "TEKAN TOMBOL [A] UNTUK MULAI", { 
+                    // Teks 3: INSTRUKSI MULAI (Ganti angka 400 untuk mendekat ke nama)
+                    this.add.text(300, 400, "TEKAN TOMBOL [A] UNTUK MULAI", { 
                         fontFamily: "'VT323'", 
                         fontSize: "20px", 
                         fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
-                },
-                update: function() {
-                    this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
-                    this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
-
-                    if (window.virtualController.actionAPressed) {
-                        window.virtualController.actionAPressed = false; 
-                        bukaPage(2);
-                    }
                 }
             }
         };
