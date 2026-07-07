@@ -249,44 +249,30 @@
 
                     this.add.image(300, 400, 'custom_bg').setDisplaySize(600, 800);
 
-                    // Awan Tetap Normal
                     this.clouds = this.physics.add.group();
                     for (let i = 0; i < 6; i++) {
                         this.clouds.create(i * 120, Phaser.Math.Between(40, 150), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
                     }
 
-                    // 🐦 PERBAIKAN BURUNG: Rute terbang dinaikkan ke area atas (Y: 100 - 180) agar tidak menabrak teks
                     this.birds = this.physics.add.group();
                     for (let i = 0; i < 2; i++) {
                         this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(100, 180), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
                     }
 
-                    // ☀️ PERBAIKAN MATAHARI: Skala diperbesar menjadi 1.1 untuk kesan megah arcade
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
                     this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    // 🎯 PERBAIKAN TEKS: Ukuran font diperbesar & dirapatkan manual di tengah matahari yang membesar
-                    // Teks 1: THE WEDDING OF (Font naik ke 26px, koordinat Y pas di 330)
-                    this.add.text(300, 330, "THE WEDDING OF", { 
-                        fontFamily: "'VT323'", 
-                        fontSize: "36px", 
-                        fill: "#ffb804" 
+                    this.add.text(300, 340, "THE WEDDING OF", { 
+                        fontFamily: "'VT323'", fontSize: "38px", fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // Teks 2: Mar'ie & Haiyi (Font naik ke 44px, koordinat Y pas di 380)
                     this.add.text(300, 380, "Mar'ie & Haiyi", { 
-                        fontFamily: "'Playfair Display'", 
-                        fontSize: "58px", 
-                        fill: "#000000", 
-                        fontWeight: "bold" 
-                    }).setOrigin(0.5).setShadow(3, 3, '#ffffff', 0);
-
-                    // Teks 3: INSTRUKSI MULAI (Font naik ke 22px, koordinat Y pas di 430)
-                    this.add.text(300, 430, "TEKAN TOMBOL [A] UNTUK MULAI", { 
-                        fontFamily: "'VT323'", 
-                        fontSize: "28px", 
-                        fill: "#ffb804" 
+                        fontFamily: "'Playfair Display'", fontSize: "60px", fill: "#ffffff", fontWeight: "bold" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+
+                    this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { 
+                        fontFamily: "'VT323'", fontSize: "30px", fill: "#ffb804" 
+                    }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
 
                     // --- ☁️ MATRIKS TRANSISI AWAN TOTAL ANTI-BOCOR ---
                     this.groupTransisi = this.add.group();
@@ -341,28 +327,64 @@
     }
 
     // =========================================================================
-    // 🏎️ SCENE 2: GAME MOBIL KLASIK
+    // 🏎️ SCENE 2: GAME MOBIL RETRO (ASET TERPISAH)
     // =========================================================================
     function initGameMobil() {
         const configMobil = {
             type: Phaser.AUTO,
             width: 600, height: 800,
             parent: 'game-container',
-            physics: { default: 'arcade' },
+            physics: { 
+                default: 'arcade',
+                arcade: { debug: false }
+            },
             scene: {
                 preload: function() {
-                    this.load.image('road', 'assets/jalan_raya.png'); 
+                    // --- 🛣️ ASET LINGKUNGAN TERPISAH ---
+                    this.load.image('road', 'assets/jalan_raya.png');       
+                    this.load.image('grass', 'assets/rumput.png');          
+                    
+                    // --- 🚗 ASET KARAKTER & NPC ---
                     this.load.image('player_car', 'assets/mobil_kamu.png'); 
                     this.load.image('cloud', 'assets/awan.png'); 
+                    this.load.image('npc_1', 'assets/mobil_npc1.png'); 
+                    this.load.image('npc_2', 'assets/mobil_npc2.png'); 
+                    this.load.image('npc_3', 'assets/mobil_npc3.png'); 
+                    this.load.image('npc_4', 'assets/mobil_npc4.png'); 
+
+                    // --- 🪧 ASET RAMBU JALAN STORY ---
+                    this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
+                    this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
+                    this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
+                    this.load.image('sign_4', 'assets/rambu_informasi4.png'); 
+                    this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
                 },
                 create: function() {
-                    this.road = this.add.tileSprite(300, 400, 600, 800, 'road');
+                    // Membuat Layout Lingkungan Mandiri (Seamless Loop)
+                    this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
+                    this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
+                    this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
+
+                    // Mobil Utama Pemain
                     this.player = this.physics.add.sprite(300, 700, 'player_car');
                     this.player.setCollideWorldBounds(true);
+                    
+                    // Mengunci Batasan Mobil agar Hanya Bergerak di Atas Aspal (X: 120 - 480) dengan padding aman
+                    this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
+
+                    this.npcGroup = this.physics.add.group();
+                    this.signGroup = this.physics.add.group();
+
+                    this.daftarRambu = ['sign_1', 'sign_2', 'sign_3', 'sign_4', 'sign_5'];
+                    this.indeksRambuSekarang = 0;
+
+                    // Pengatur Otomatis Laju Spawn Karakter
+                    this.time.addEvent({ delay: 2500, callback: this.spawnNPC, callbackScope: this, loop: true });
+                    this.time.addEvent({ delay: 6000, callback: this.spawnRambuCerita, callbackScope: this, loop: true });
 
                     this.cursors = this.input.keyboard.createCursorKeys();
-                    this.add.text(20, 20, "PAGE 2: JALAN RAYA MELAJU (3:4)", { fontFamily: "'VT323'", fontSize: "20px", fill: "#fff" }).setDepth(1);
 
+                    // --- ☁️ INTEGRASI TRANSISI MEMBUKA ---
                     this.groupMembuka = this.add.group();
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
@@ -370,9 +392,7 @@
                             let xTengah = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
                             let xKeluar = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
                             
-                            let awanBlok = this.add.image(xTengah, y, 'cloud');
-                            awanBlok.setDisplaySize(260, 160).setDepth(100);
-                            
+                            let awanBlok = this.add.image(xTengah, y, 'cloud').setDisplaySize(260, 160).setDepth(100);
                             awanBlok.setData('xKeluar', xKeluar);
                             this.groupMembuka.add(awanBlok);
                         }
@@ -395,15 +415,46 @@
                 update: function() {
                     if (!isTransitioning) {
                         this.road.tilePositionY -= 6; 
+                        this.grassLeft.tilePositionY -= 6;
+                        this.grassRight.tilePositionY -= 6;
                     }
 
                     if (this.cursors.left.isDown || window.virtualController.leftPressed) {
-                        this.player.setVelocityX(-250);
+                        this.player.setVelocityX(-280);
                     } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
-                        this.player.setVelocityX(250);
+                        this.player.setVelocityX(280);
                     } else {
-                        this.player.setVelocityX(0);
+                        this.player.setVelocityX(0); 
                     }
+
+                    this.npcGroup.children.iterate(npc => { if (npc && npc.y > 850) npc.destroy(); });
+                    this.signGroup.children.iterate(sign => { if (sign && sign.y > 850) sign.destroy(); });
+                },
+
+                spawnNPC: function() {
+                    if (isTransitioning) return;
+                    const koordinatJalurX = [200, 300, 400];
+                    let xAcak = Phaser.Math.RND.pick(koordinatJalurX);
+                    let tipeNPCX = Phaser.Math.RND.pick(['npc_1', 'npc_2', 'npc_3', 'npc_4']);
+
+                    let npc = this.npcGroup.create(xAcak, -50, tipeNPCX);
+                    npc.setVelocityY(Phaser.Math.Between(150, 220)); 
+                    npc.setDepth(2);
+                },
+
+                spawnRambuCerita: function() {
+                    if (isTransitioning) return;
+                    if (this.indeksRambuSekarang >= this.daftarRambu.length) return;
+
+                    let kunciRambuSkg = this.daftarRambu[this.indeksRambuSekarang];
+                    let diKiri = (this.indeksRambuSekarang % 2 === 0);
+                    let xPosisiRambu = diKiri ? 60 : 540; 
+
+                    let rambu = this.signGroup.create(xPosisiRambu, -80, kunciRambuSkg);
+                    rambu.setVelocityY(360); 
+                    rambu.setDepth(1);
+
+                    this.indeksRambuSekarang++;
                 }
             }
         };
