@@ -215,14 +215,17 @@
             phaserGameInstance = null;
         }
 
-        if (pageNumber === 1) initLandingPage();
-        else if (pageNumber === 2) initGameMobil();
+        // Penambahan jeda aman agar Phaser membersihkan scene sebelumnya sebelum membuat scene baru
+        setTimeout(() => {
+            if (pageNumber === 1) initLandingPage();
+            else if (pageNumber === 2) initGameMobil();
+        }, 50);
     }
 
     window.onload = () => { bukaPage(1); };
 
     // =========================================================================
-    // 🌅 SCENE 1: LANDING PAGE (DIOPTIMALKAN COORD & SPACINGNYA)
+    // 🌅 SCENE 1: LANDING PAGE
     // =========================================================================
     function initLandingPage() {
         const configLanding = {
@@ -258,22 +261,16 @@
                         this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(180, 280), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
                     }
 
-                    // Menggeser Matahari sedikit ke bawah agar komposisi lebih seimbang
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(0.7);
                     this.tweens.add({ targets: this.sun, scale: { from: 0.68, to: 0.72 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    // =========================================================================
-                    // 🎯 ATUR MANUAL KOORDINAT Y (ANGKA KEDUA) UNTUK MERAPATKAN TEKS
-                    // =========================================================================
-                    
-                    // Teks 1: THE WEDDING OF (Ganti angka 320 untuk naik/turun)
+                    // Teks Kustomisasi Manual Pilihanmu (340, 380, 420)
                     this.add.text(300, 340, "THE WEDDING OF", { 
                         fontFamily: "'VT323'", 
                         fontSize: "22px", 
                         fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // Teks 2: Mar'ie & Haiyi (Ganti angka 360 untuk mendekat ke teks atas)
                     this.add.text(300, 380, "Mar'ie & Haiyi", { 
                         fontFamily: "'Playfair Display'", 
                         fontSize: "38px", 
@@ -281,12 +278,22 @@
                         fontWeight: "bold" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // Teks 3: INSTRUKSI MULAI (Ganti angka 400 untuk mendekat ke nama)
                     this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { 
                         fontFamily: "'VT323'", 
                         fontSize: "20px", 
                         fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
+                },
+                // --- 🛠️ PERBAIKAN: MENAMBAHKAN KEMBALI FUNGSI UPDATE UNTUK MENANGKAP INPUT TOMBOL A ---
+                update: function() {
+                    this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
+                    this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
+
+                    // Deteksi klik pada tombol [A] untuk berpindah halaman ke Game Mobil
+                    if (window.virtualController.actionAPressed) {
+                        window.virtualController.actionAPressed = false; // Reset trigger input
+                        bukaPage(2);
+                    }
                 }
             }
         };
