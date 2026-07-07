@@ -6,7 +6,7 @@
     <title>Undangan Pernikahan Interaktif</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Playfair+Display:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 
     <style>
         body, html { 
@@ -21,7 +21,6 @@
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            /* Mencegah gesture 'pull-to-refresh' di Chrome Mobile */
             overscroll-behavior-y: contain; 
         }
         
@@ -37,93 +36,20 @@
         }
         .active { display: flex; }
         
-        /* BINGKAI UTAMA GAME (Letterbox Proporsional otomatis via JS) */
+        /* BINGKAI UTAMA GAME (Dikelola murni secara proporsional oleh Phaser) */
         .game-canvas-container {
-            position: absolute; 
-            width: 800px;
-            height: 450px;
+            position: relative; 
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 450px;
+            aspect-ratio: 16 / 9;
             box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
-            top: 50%;
-            left: 50%;
-            /* Mengunci poros pembesaran tepat di tengah container */
-            transform: translate(-50%, -50%) scale(1);
-            transform-origin: center center;
-            flex-shrink: 0; 
-        }
-
-        #landing-bg-container {
-            width: 800px;
-            height: 450px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1; 
         }
         
-        canvas { image-rendering: pixelated; display: block; }
+        canvas { image-rendering: pixelated; width: 100% !important; height: 100% !important; }
 
-        /* TEKS OVERLAY */
-        .ui-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; 
-            justify-content: flex-start; 
-            align-items: center;
-            text-shadow: 2px 2px 0px #000000;
-            text-align: center;
-            box-sizing: border-box;
-            padding-top: 135px; 
-            pointer-events: none; 
-            z-index: 2; 
-        }
-        
-        .ui-overlay h2, .ui-overlay h1, .ui-overlay p { pointer-events: none; }
-        
-        .ui-overlay h2 {
-            font-family: 'VT323', monospace;
-            color: #ffb804;
-            font-size: 20px;
-            margin: 0;
-            letter-spacing: 2px;
-        }
-
-        .ui-overlay h1 {
-            font-family: 'Playfair Display', serif;
-            color: #a5a5a5;
-            font-size: 38px; 
-            margin: 8px 0;   
-            font-weight: bold;
-        }
-
-        .ui-overlay p {
-            font-family: 'VT323', monospace;
-            color: #ffb804;
-            font-size: 18px;
-            margin: 0;
-            letter-spacing: 1px;
-        }
-
-        /* TOMBOL MULAI */
-        .btn-start { 
-            position: absolute;
-            bottom: 45px; 
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 20px; 
-            font-size: 18px; 
-            font-family: 'VT323', monospace;
-            background-color: #4a7c59;
-            color: white; 
-            border: 4px solid #fff; 
-            cursor: pointer; 
-            box-shadow: 4px 4px 0px #000;
-            pointer-events: auto !important; 
-            z-index: 99999 !important; 
-        }
-        .btn-start:hover { background-color: #355e41; transform: translateX(-50%) translate(-2px); box-shadow: 6px 6px 0px #000; }
-        .btn-start:active { transform: translateX(-50%) translate(2px); box-shadow: 2px 2px 0px #000; }
-
-        /* PEMBERITAHUAN ROTASI (Dikendalikan penuh oleh JavaScript) */
+        /* PEMBERITAHUAN ROTASI */
         #rotate-instruction {
             display: none; 
             position: fixed;
@@ -161,21 +87,11 @@
     <div id="rotate-instruction">
         <div class="icon-phone">📱🔄</div>
         <h3>MOHON PUTAR PONSEL ANDA</h3>
-        <p>Silakan aktifkan rotasi layar otomatis dan gunakan mode Landscape (Mendatar) untuk kenyamanan perjalanan.</p>
+        <p>Silakan aktifkan rotasi layar otomatis dan gunakan mode Landscape (Mendatar) untuk kenyamanan bermain.</p>
     </div>
 
     <div id="page1" class="page active">
-        <div class="game-canvas-container">
-            <div id="landing-bg-container"></div>
-            
-            <div class="ui-overlay">
-                <h2>THE WEDDING OF</h2>
-                <h1>Mar'ie & Haiyi</h1>
-                <p>KETUK UNTUK MEMULAI PERJALANAN</p>
-            </div>
-
-            <button class="btn-start" onclick="bukaPage(2)">MULAI</button>
-        </div>
+        <div class="game-canvas-container" id="landing-bg-container"></div>
     </div>
 
     <div id="page2" class="page"><div class="game-canvas-container" id="game-mobil-container"></div></div>
@@ -184,47 +100,24 @@
 <script>
     let currentMusic = null;
 
-    // --- 🛠️ SOLUSI PARIPURNA: JS REAL-TIME RESPONSIVE LETTERBOX & ROTATION ---
-    function kelolaUkuranDanRotasi() {
+    // Fungsi deteksi orientasi bawaan untuk pop-up instruksi
+    function cekOrientasi() {
         const pnlInstruksi = document.getElementById('rotate-instruction');
-        const containers = document.querySelectorAll('.game-canvas-container');
-        
-        // Membaca area pandang nyata (menghindari manipulasi Address Bar HP)
-        const lebarLayar = window.innerWidth;
-        const tinggiLayar = window.innerHeight;
-
-        // 1. Deteksi Detektor HP Portrait Nyata via Ukuran Piksel
         const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        if (isMobile && tinggiLayar > lebarLayar) {
-            // HP Tegak -> Munculkan pelindung, sembunyikan game
+        
+        if (isMobile && window.innerHeight > window.innerWidth) {
             pnlInstruksi.style.display = 'flex';
-            return;
         } else {
-            // Desktop atau HP Mendatar -> Sembunyikan pelindung
             pnlInstruksi.style.display = 'none';
         }
-
-        // 2. Hitung Skala Letterbox Berdasarkan Dimensi Target 800x450
-        const targetW = 800;
-        const targetH = 450;
-        let skala = Math.min(lebarLayar / targetW, tinggiLayar / targetH);
-
-        // Pasang skala secara paksa ke kontainer HTML
-        containers.forEach(container => {
-            container.style.transform = `translate(-50%, -50%) scale(${skala})`;
-        });
     }
-
-    // Pasang Event Listener super sensitif untuk menangkap rotasi di HP sungguhan
-    window.addEventListener('resize', () => { setTimeout(kelolaUkuranDanRotasi, 150); });
-    window.addEventListener('orientationchange', () => { setTimeout(kelolaUkuranDanRotasi, 150); });
+    window.addEventListener('resize', cekOrientasi);
+    window.addEventListener('orientationchange', cekOrientasi);
 
     function bukaPage(pageNumber) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page' + pageNumber).classList.add('active');
         if (currentMusic) currentMusic.stop();
-
-        setTimeout(kelolaUkuranDanRotasi, 100);
 
         if (pageNumber === 1) initLandingPage();
         else if (pageNumber === 2) initGameMobil();
@@ -233,7 +126,7 @@
 
     window.onload = () => { 
         initLandingPage(); 
-        kelolaUkuranDanRotasi();
+        cekOrientasi();
     };
 
     function initLandingPage() {
@@ -246,9 +139,8 @@
             type: Phaser.AUTO,
             width: 800, height: 450,
             parent: 'landing-bg-container',
-            // Sinkronisasi sistem skala internal Phaser dengan CSS luar
             scale: {
-                mode: Phaser.Scale.FIT,
+                mode: Phaser.Scale.FIT, // Mengunci perbesaran proporsional 16:9 bawaan Phaser
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             physics: { default: 'arcade' },
@@ -267,34 +159,23 @@
                     let bg = this.add.image(400, 225, 'custom_bg').setDisplaySize(800, 450);
                     bg.setDepth(0);
 
-                    // --- 2. AWAN BERGERAK CONTINUOUS ---
+                    // --- 2. AWAN BERGERAK ---
                     this.clouds = this.physics.add.group();
-                    let jumlahAwan = 7; 
-                    
-                    for (let i = 0; i < jumlahAwan; i++) {
-                        let posisiXAwal = i * 130 + Phaser.Math.Between(-30, 30);
-                        let posisiYAwal = Phaser.Math.Between(30, 90);
-                        let cl = this.clouds.create(posisiXAwal, posisiYAwal, 'cloud');
+                    for (let i = 0; i < 7; i++) {
+                        let cl = this.clouds.create(i * 130 + Phaser.Math.Between(-30, 30), Phaser.Math.Between(30, 90), 'cloud');
                         cl.setVelocityX(Phaser.Math.Between(6, 12)); 
-                        cl.setAlpha(0.6); 
-                        cl.setDepth(1); 
+                        cl.setAlpha(0.6).setDepth(1); 
                     }
 
                     // --- 3. BURUNG BERGERAK ---
                     this.birds = this.physics.add.group();
-                    let jumlahBurung = 3; 
-                    
-                    for (let i = 0; i < jumlahBurung; i++) {
+                    for (let i = 0; i < 3; i++) {
                         let b = this.birds.create(Phaser.Math.Between(-300, -50), Phaser.Math.Between(100, 170), 'bird');
-                        b.setScale(0.5); 
-                        b.setVelocityX(Phaser.Math.Between(25, 40)); 
-                        b.setDepth(2); 
+                        b.setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40)).setDepth(2); 
                     }
 
-                    // --- 4. MATAHARI/BORDER BINGKAI ---
-                    this.sun = this.add.sprite(400, 190, 'sun').setScale(0.7);
-                    this.sun.setDepth(3); 
-                    
+                    // --- 4. MATAHARI ---
+                    this.sun = this.add.sprite(400, 190, 'sun').setScale(0.7).setDepth(3); 
                     this.tweens.add({
                         targets: this.sun,
                         scale: { from: 0.68, to: 0.72 },
@@ -302,33 +183,69 @@
                         yoyo: true,
                         repeat: -1
                     });
+
+                    // =========================================================================
+                    // 🎯 SEKARANG TEKS & TOMBOL DICETAK DI DALAM PHASER (ANTI-BERANTAKAN)
+                    // =========================================================================
+                    
+                    // Teks 1: THE WEDDING OF
+                    this.add.text(400, 140, "THE WEDDING OF", {
+                        fontFamily: "'VT323', monospace",
+                        fontSize: "20px",
+                        fill: "#ffb804",
+                        letterSpacing: 2
+                    }).setOrigin(0.5).setDepth(4).setShadow(2, 2, '#000000', 0);
+
+                    // Teks 2: Mar'ie & Haiyi
+                    this.add.text(400, 185, "Mar'ie & Haiyi", {
+                        fontFamily: "'Playfair Display', serif",
+                        fontSize: "38px",
+                        fill: "#a5a5a5",
+                        fontWeight: "bold"
+                    }).setOrigin(0.5).setDepth(4).setShadow(2, 2, '#000000', 0);
+
+                    // Teks 3: KETUK UNTUK MEMULAI PERJALANAN
+                    this.add.text(400, 230, "KETUK UNTUK MEMULAI PERJALANAN", {
+                        fontFamily: "'VT323', monospace",
+                        fontSize: "18px",
+                        fill: "#ffb804"
+                    }).setOrigin(0.5).setDepth(4).setShadow(1, 1, '#000000', 0);
+
+                    // --- TOMBOL MULAI ASLI PHASER ---
+                    // Membuat kotak latar belakang tombol hijau (x: 400, y: 370, lebar: 120, tinggi: 40)
+                    let btnBg = this.add.rectangle(400, 365, 120, 40, 0x4a7c59)
+                        .setStrokeStyle(4, 0xffffff)
+                        .setDepth(4)
+                        .setInteractive({ useHandCursor: true });
+
+                    // Membuat tulisan "MULAI" di tengah kotak hijau
+                    let btnText = this.add.text(400, 365, "MULAI", {
+                        fontFamily: "'VT323', monospace",
+                        fontSize: "18px",
+                        fill: "#ffffff"
+                    }).setOrigin(0.5).setDepth(5);
+
+                    // Efek Interaktif Tombol (Hover & Klik)
+                    btnBg.on('pointerover', () => { btnBg.setFillStyle(0x355e41); });
+                    btnBg.on('pointerout', () => { btnBg.setFillStyle(0x4a7c59); });
+                    
+                    btnBg.on('pointerdown', () => {
+                        window.landingGame.destroy(true);
+                        window.landingGame = null;
+                        bukaPage(2);
+                    });
                 },
                 update: function() {
                     this.clouds.children.iterate(function(cl) {
-                        if (cl && cl.x > 860) {
-                            cl.x = -60; 
-                            cl.y = Phaser.Math.Between(30, 90);
-                        }
+                        if (cl && cl.x > 860) { cl.x = -60; cl.y = Phaser.Math.Between(30, 90); }
                     });
-
                     this.birds.children.iterate(function(b) {
-                        if (b && b.x > 850) {
-                            b.x = -50;
-                            b.y = Phaser.Math.Between(100, 170); 
-                        }
+                        if (b && b.x > 850) { b.x = -50; b.y = Phaser.Math.Between(100, 170); }
                     });
                 }
             }
         };
         window.landingGame = new Phaser.Game(configLanding);
-    }
-
-    function putarMusik(scene, key) {
-        if (scene.sound.status === Phaser.Sound.Locked) return;
-        try {
-            currentMusic = scene.sound.add(key, { loop: true, volume: 0.4 });
-            currentMusic.play();
-        } catch(e) { console.log("Audio belum siap."); }
     }
 
     // Fungsi placeholder singkat untuk Page 2 & 3
