@@ -3,178 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>Undangan Pernikahan Interaktif</title>
+    <title>Undangan Pernikahan Interaktif - Retro Arcade</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Playfair+Display:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 
     <style>
         body, html { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: #2c3e50; 
-            
-            /* KUNCI TOTAL: Mematikan semua potensi scroll dan pergeseran di HP */
-            overflow: hidden; 
-            position: fixed; /* Memaksa body diam di tempat, anti-geser saat di-refresh */
-            
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-        }
-        
-        .page { 
-            width: 100%; 
-            height: 100%; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            display: none; 
-            justify-content: center; 
-            align-items: center; 
-        }
-        .active { display: flex; }
-        
-        /* WADAH UTAMA GAME (DILOCK TENGAH MUTLAK & AUTO CROP PINGGIRAN DI HP) */
-        .game-canvas-container {
-            position: absolute; 
-            width: 800px;
-            height: 450px;
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
-            
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); 
-            flex-shrink: 0; 
-        }
-
-        /* Wadah untuk menempelkan game Phaser */
-        #landing-bg-container {
-            width: 800px;
-            height: 450px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1; /* Di bawah teks overlay dan tombol */
-        }
-        
-        canvas { image-rendering: pixelated; width: 100%; height: 100%; }
-
-        /* TEKS KUSTOMISASI */
-        .ui-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; 
-            justify-content: flex-start; 
-            align-items: center;
-            text-shadow: 2px 2px 0px #000000;
-            text-align: center;
-            box-sizing: border-box;
-            padding-top: 135px; 
-            
-            /* Lapisan di atas canvas Phaser */
-            pointer-events: none; 
-            z-index: 2; 
-        }
-        
-        .ui-overlay h2, .ui-overlay h1, .ui-overlay p {
-            pointer-events: none; /* Klik tikus/sentuhan menembus teks */
-        }
-        
-        .ui-overlay h2 {
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #c5c5c6; overflow: hidden; position: fixed;
+            display: flex; justify-content: center; align-items: center; 
             font-family: 'VT323', monospace;
-            color: #ffb804;
-            font-size: 20px;
-            margin: 0;
-            letter-spacing: 2px;
+            overscroll-behavior-y: contain; 
         }
 
-        .ui-overlay h1 {
-            font-family: 'Playfair Display', serif;
-            color: #a5a5a5;
-            font-size: 38px; 
-            margin: 8px 0;   
+        /* 🕹️ CASING KONSOL ARCADE UTAMA (Rasio Tegak Handheld) */
+        .arcade-console {
+            width: 100vw;
+            height: 100vh;
+            max-width: 450px;  /* Menyerupai ukuran Game Boy / Layar HP Tegak */
+            max-height: 850px;
+            background: #a4a4a4; /* Warna abu-abu plastik konsol retro */
+            border: 8px solid #1c1e22;
+            border-radius: 20px;
+            box-shadow: 0px 20px 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-sizing: border-box;
+            padding: 15px;
+        }
+
+        /* Ornamen Garis Estetik Jadul */
+        .console-header {
+            width: 100%;
+            text-align: center;
+            color: #4e535c;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            border-bottom: 3px double #1c1e22;
+            padding-bottom: 5px;
+        }
+
+        /* 📺 LAYAR UTAMA GAME (Rasio 16:9 Tetap Tajam) */
+        .screen-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border: 6px solid #1c1e22;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1);
+        }
+        
+        #game-container { width: 100%; height: 100%; }
+        canvas { image-rendering: pixelated; width: 100% !important; height: 100% !important; }
+
+        /* 🎮 AREA KONTROL BAWAH (VIRTUAL D-PAD & TOMBOL) */
+        .controls-area {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* Ornaments Speaker Jadul */
+        .speaker-grille {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            width: 60px;
+            height: 40px;
+            background: repeating-linear-gradient(-45deg, #1c1e22, #1c1e22 4px, transparent 4px, transparent 12px);
+            opacity: 0.4;
+        }
+
+        /* VIRTUAL D-PAD (Tombol Arah) */
+        .d-pad {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        .d-btn {
+            position: absolute;
+            background: #1c1e22;
+            border: 2px solid #000;
+            color: #555;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: inset 0 3px 5px rgba(255,255,255,0.1);
+        }
+        .d-btn:active { background: #000; color: #fff; }
+        
+        .d-left  { top: 40px; left: 0; width: 40px; height: 40px; border-radius: 5px 0 0 5px; }
+        .d-right { top: 40px; right: 0; width: 40px; height: 40px; border-radius: 0 5px 5px 0; }
+        .d-center { top: 40px; left: 40px; width: 40px; height: 40px; background: #1c1e22; box-shadow: none; border: none;}
+
+        /* TOMBOL AKSI KANAN (Tombol A / B Merah Jadul) */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            transform: rotate(-15deg); /* Estetik miring Game Boy */
+        }
+        .action-btn {
+            width: 50px;
+            height: 50px;
+            background: #a61e22; /* Merah jadul */
+            border: 3px solid #1c1e22;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 0 #611012, inset 0 2px 4px rgba(255,255,255,0.3);
+        }
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0 #611012;
+        }
+        .btn-label {
+            font-size: 12px;
+            color: #1c1e22;
+            text-align: center;
+            margin-top: 4px;
             font-weight: bold;
         }
-
-        .ui-overlay p {
-            font-family: 'VT323', monospace;
-            color: #ffb804;
-            font-size: 18px;
-            margin: 0;
-            letter-spacing: 1px;
-            text-shadow: 1px 1px 0px #000000;
-        }
-
-        /* TOMBOL MULAI MANDIRI */
-        .btn-start { 
-            position: absolute;
-            bottom: 45px; /* Mengunci jarak pas di bawah baris teks <p> */
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 20px; 
-            font-size: 18px; 
-            font-family: 'VT323', monospace;
-            background-color: #4a7c59;
-            color: white; 
-            border: 4px solid #fff; 
-            cursor: pointer; 
-            box-shadow: 4px 4px 0px #000;
-            
-            /* Kunci agar tombol berada di kasta lapisan teratas dan selalu bisa diklik */
-            pointer-events: auto !important; 
-            z-index: 99999 !important; 
-        }
-        .btn-start:hover { background-color: #355e41; transform: translate(-50%, -2px); box-shadow: 6px 6px 0px #000; }
-        .btn-start:active { transform: translate(-50%, 2px); box-shadow: 2px 2px 0px #000; }
     </style>
 </head>
 <body>
 
-    <div id="page1" class="page active">
-        <div class="game-canvas-container">
-            <div id="landing-bg-container"></div>
+    <div class="arcade-console">
+        <div class="console-header">★ RETRO WEDDING SYSTEM ★</div>
+        
+        <div class="screen-frame">
+            <div id="game-container"></div>
+        </div>
+        
+        <div class="controls-area">
+            <div class="d-pad">
+                <div class="d-btn d-left" id="btn-left">◀</div>
+                <div class="d-btn d-center"></div>
+                <div class="d-btn d-right" id="id-right" id="btn-right">▶</div>
+            </div>
             
-            <div class="ui-overlay">
-                <h2>THE WEDDING OF</h2>
-                <h1>Mar'ie & Haiyi</h1>
-                <p>KETUK UNTUK MEMULAI PERJALANAN</p>
+            <div class="action-buttons">
+                <div>
+                    <div class="action-btn" id="btn-action-b">B</div>
+                    <div class="btn-label">SELECT</div>
+                </div>
+                <div>
+                    <div class="action-btn" id="btn-action-a">A</div>
+                    <div class="btn-label">START</div>
+                </div>
             </div>
 
-            <button class="btn-start" onclick="bukaPage(2)">MULAI</button>
+            <div class="speaker-grille"></div>
         </div>
     </div>
 
-    <div id="page2" class="page"><div class="game-canvas-container" id="game-mobil-container"></div></div>
-    <div id="page3" class="page"><div class="game-canvas-container" id="game-side-container"></div></div>
-
 <script>
     let currentMusic = null;
+    let phaserGameInstance = null;
+    let globalActivePage = 1;
 
+    // Objek global untuk menjembatani klik tombol HTML luar ke dalam Phaser
+    window.virtualController = {
+        leftPressed: false,
+        rightPressed: false,
+        actionAPressed: false,
+        actionBPressed: false
+    };
+
+    // Integrasi Event Listener Sentuhan D-Pad (Aman untuk HP & Laptop)
+    const setVirtualInput = (elementId, keyProp) => {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        const startAction = (e) => { e.preventDefault(); window.virtualController[keyProp] = true; };
+        const stopAction = () => { window.virtualController[keyProp] = false; };
+        
+        el.addEventListener('mousedown', startAction);
+        el.addEventListener('mouseup', stopAction);
+        el.addEventListener('touchstart', startAction);
+        el.addEventListener('touchend', stopAction);
+    };
+
+    // Pasang pelacak tombol virtual
+    setTimeout(() => {
+        setVirtualInput('btn-left', 'leftPressed');
+        setVirtualInput('btn-right', 'rightPressed');
+        setVirtualInput('btn-action-a', 'actionAPressed');
+        setVirtualInput('btn-action-b', 'actionBPressed');
+    }, 500);
+
+    // Fungsi navigasi halaman terpusat di dalam 1 canvas Phaser tunggal
     function bukaPage(pageNumber) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('page' + pageNumber).classList.add('active');
+        globalActivePage = pageNumber;
         if (currentMusic) currentMusic.stop();
+        
+        // Bersihkan scene lama sebelum membuat scene baru
+        if (phaserGameInstance) {
+            phaserGameInstance.destroy(true);
+            phaserGameInstance = null;
+        }
 
         if (pageNumber === 1) initLandingPage();
         else if (pageNumber === 2) initGameMobil();
-        else if (pageNumber === 3) initGameSideScroller();
     }
 
-    window.onload = () => { initLandingPage(); };
+    window.onload = () => { bukaPage(1); };
 
+    // =========================================================================
+    // 🌅 SCENE 1: LANDING PAGE (DI DALAM PHASER)
+    // =========================================================================
     function initLandingPage() {
-        if (window.landingGame) {
-            putarMusik(window.landingGame.scene.scenes[0], 'bgm_page1');
-            return;
-        }
-        
         const configLanding = {
             type: Phaser.AUTO,
             width: 800, height: 450,
-            parent: 'landing-bg-container',
+            parent: 'game-container',
             physics: { default: 'arcade' },
             scene: {
                 preload: function() {
@@ -185,82 +245,86 @@
                     this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
                 },
                 create: function() {
-                    putarMusik(this, 'bgm_page1');
+                    if (this.sound.status !== Phaser.Sound.Locked) {
+                        try {
+                            currentMusic = this.sound.add('bgm_page1', { loop: true, volume: 0.4 });
+                            currentMusic.play();
+                        } catch(e) {}
+                    }
 
-                    // --- 1. BACKGROUND ---
-                    let bg = this.add.image(400, 225, 'custom_bg').setDisplaySize(800, 450);
-                    bg.setDepth(0);
+                    this.add.image(400, 225, 'custom_bg').setDisplaySize(800, 450);
 
-                    // --- 2. AWAN BERGERAK CONTINUOUS ---
+                    // Awan & Burung
                     this.clouds = this.physics.add.group();
-                    let jumlahAwan = 7; 
-                    
-                    for (let i = 0; i < jumlahAwan; i++) {
-                        let posisiXAwal = i * 130 + Phaser.Math.Between(-30, 30);
-                        let posisiYAwal = Phaser.Math.Between(30, 90);
-                        let cl = this.clouds.create(posisiXAwal, posisiYAwal, 'cloud');
-                        cl.setVelocityX(Phaser.Math.Between(6, 12)); 
-                        cl.setAlpha(0.6); 
-                        cl.setDepth(1); 
+                    for (let i = 0; i < 6; i++) {
+                        this.clouds.create(i * 150, Phaser.Math.Between(30, 90), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
                     }
-
-                    // --- 3. BURUNG BERGERAK ---
                     this.birds = this.physics.add.group();
-                    let jumlahBurung = 3; 
-                    
-                    for (let i = 0; i < jumlahBurung; i++) {
-                        let b = this.birds.create(Phaser.Math.Between(-300, -50), Phaser.Math.Between(100, 170), 'bird');
-                        b.setScale(0.5); 
-                        b.setVelocityX(Phaser.Math.Between(25, 40)); 
-                        b.setDepth(2); 
+                    for (let i = 0; i < 2; i++) {
+                        this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(100, 160), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
                     }
 
-                    // --- 4. MATAHARI/BORDER BINGKAI ---
+                    // Matahari
                     this.sun = this.add.sprite(400, 190, 'sun').setScale(0.7);
-                    this.sun.setDepth(3); 
-                    
-                    this.tweens.add({
-                        targets: this.sun,
-                        scale: { from: 0.68, to: 0.72 },
-                        duration: 3500,
-                        yoyo: true,
-                        repeat: -1
-                    });
+                    this.tweens.add({ targets: this.sun, scale: { from: 0.68, to: 0.72 }, duration: 3500, yoyo: true, repeat: -1 });
+
+                    // Teks Tampilan Cetak Dalam Phaser
+                    this.add.text(400, 140, "THE WEDDING OF", { fontFamily: "'VT323'", fontSize: "22px", fill: "#ffb804" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(400, 185, "Mar'ie & Haiyi", { fontFamily: "'Playfair Display'", fontSize: "36px", fill: "#ffffff", fontWeight: "bold" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(400, 240, "TEKAN TOMBOL [A] UNTUK MULAI", { fontFamily: "'VT323'", fontSize: "20px", fill: "#ffb804" }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
                 },
                 update: function() {
-                    this.clouds.children.iterate(function(cl) {
-                        if (cl && cl.x > 860) {
-                            cl.x = -60; 
-                            cl.y = Phaser.Math.Between(30, 90);
-                        }
-                    });
+                    this.clouds.children.iterate(cl => { if (cl && cl.x > 850) cl.x = -50; });
+                    this.birds.children.iterate(b => { if (b && b.x > 850) b.x = -50; });
 
-                    this.birds.children.iterate(function(b) {
-                        if (b && b.x > 850) {
-                            b.x = -50;
-                            b.y = Phaser.Math.Between(100, 170); 
-                        }
-                    });
+                    // LOGIKA DETEKSI INPUT: Jika tombol A fisik/virtual ditekan, ganti halaman
+                    if (window.virtualController.actionAPressed) {
+                        window.virtualController.actionAPressed = false; // Reset trigger
+                        bukaPage(2);
+                    }
                 }
             }
         };
-        window.landingGame = new Phaser.Game(configLanding);
+        phaserGameInstance = new Phaser.Game(configLanding);
     }
 
-    function putarMusik(scene, key) {
-        if (scene.sound.status === Phaser.Sound.Locked) return;
-        try {
-            currentMusic = scene.sound.add(key, { loop: true, volume: 0.4 });
-            currentMusic.play();
-        } catch(e) { console.log("Audio belum siap."); }
-    }
+    // =========================================================================
+    // 🏎️ SCENE 2: GAME MOBIL KLASIK
+    // =========================================================================
+    function initGameMobil() {
+        const configMobil = {
+            type: Phaser.AUTO,
+            width: 800, height: 450,
+            parent: 'game-container',
+            physics: { default: 'arcade' },
+            scene: {
+                preload: function() {
+                    this.load.image('road', 'assets/jalan_raya.png'); 
+                    this.load.image('player_car', 'assets/mobil_kamu.png'); 
+                },
+                create: function() {
+                    this.road = this.add.tileSprite(400, 225, 800, 450, 'road');
+                    this.player = this.physics.add.sprite(400, 370, 'player_car');
+                    this.player.setCollideWorldBounds(true);
 
-    // Fungsi placeholder singkat untuk Page 2 & 3
-    function initGameMobil() { 
-        new Phaser.Game({ type: Phaser.AUTO, width: 800, height: 450, parent: 'game-mobil-container', scene: { create: function() { this.add.text(400, 225, 'GAME MOBIL - Klik untuk lanjut', {fontSize: '20px'}).setOrigin(0.5); this.input.on('pointerdown', () => { this.sys.game.destroy(true); bukaPage(3); }); } } });
-    }
-    function initGameSideScroller() { 
-        new Phaser.Game({ type: Phaser.AUTO, width: 800, height: 450, parent: 'game-side-container', scene: { create: function() { this.add.text(400, 225, 'GAME SIDE SCROLLING - Klik untuk ke Awal', {fontSize: '20px'}).setOrigin(0.5); this.input.on('pointerdown', () => { this.sys.game.destroy(true); bukaPage(1); }); } } });
+                    this.cursors = this.input.keyboard.createCursorKeys();
+                    this.add.text(20, 20, "PAGE 2: JALAN RAYA MELAJU", { fontFamily: "'VT323'", fontSize: "18px", fill: "#fff" });
+                },
+                update: function() {
+                    this.road.tilePositionY -= 5; // Jalankan animasi jalan melaju
+
+                    // 🕹️ INTEGRASI KENDALI GANDA: Keyboard Laptop + D-Pad Virtual HP
+                    if (this.cursors.left.isDown || window.virtualController.leftPressed) {
+                        this.player.setVelocityX(-250);
+                    } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
+                        this.player.setVelocityX(250);
+                    } else {
+                        this.player.setVelocityX(0);
+                    }
+                }
+            }
+        };
+        phaserGameInstance = new Phaser.Game(configMobil);
     }
 </script>
 </body>
