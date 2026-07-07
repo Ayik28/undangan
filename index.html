@@ -249,36 +249,55 @@
 
                     this.add.image(300, 400, 'custom_bg').setDisplaySize(600, 800);
 
+                    // Awan Tetap Normal
                     this.clouds = this.physics.add.group();
                     for (let i = 0; i < 6; i++) {
                         this.clouds.create(i * 120, Phaser.Math.Between(40, 150), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
                     }
+
+                    // 🐦 PERBAIKAN BURUNG: Rute terbang dinaikkan ke area atas (Y: 100 - 180) agar tidak menabrak teks
                     this.birds = this.physics.add.group();
                     for (let i = 0; i < 2; i++) {
-                        this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(180, 280), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
+                        this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(100, 180), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
                     }
 
-                    this.sun = this.add.sprite(300, 390, 'sun').setScale(0.7);
-                    this.tweens.add({ targets: this.sun, scale: { from: 0.68, to: 0.72 }, duration: 3500, yoyo: true, repeat: -1 });
+                    // ☀️ PERBAIKAN MATAHARI: Skala diperbesar menjadi 1.1 untuk kesan megah arcade
+                    this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
+                    this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    this.add.text(300, 340, "THE WEDDING OF", { fontFamily: "'VT323'", fontSize: "22px", fill: "#ffb804" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
-                    this.add.text(300, 380, "Mar'ie & Haiyi", { fontFamily: "'Playfair Display'", fontSize: "38px", fill: "#ffffff", fontWeight: "bold" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
-                    this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { fontFamily: "'VT323'", fontSize: "20px", fill: "#ffb804" }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
+                    // 🎯 PERBAIKAN TEKS: Ukuran font diperbesar & dirapatkan manual di tengah matahari yang membesar
+                    // Teks 1: THE WEDDING OF (Font naik ke 26px, koordinat Y pas di 330)
+                    this.add.text(300, 330, "THE WEDDING OF", { 
+                        fontFamily: "'VT323'", 
+                        fontSize: "26px", 
+                        fill: "#ffb804" 
+                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // --- ☁️ PERBAIKAN GRID TRANSISI: ULTRA RAPAT & RENCANA TUTUP TOTAL NYATA ---
+                    // Teks 2: Mar'ie & Haiyi (Font naik ke 44px, koordinat Y pas di 380)
+                    this.add.text(300, 380, "Mar'ie & Haiyi", { 
+                        fontFamily: "'Playfair Display'", 
+                        fontSize: "44px", 
+                        fill: "#ffffff", 
+                        fontWeight: "bold" 
+                    }).setOrigin(0.5).setShadow(3, 3, '#000', 0);
+
+                    // Teks 3: INSTRUKSI MULAI (Font naik ke 22px, koordinat Y pas di 430)
+                    this.add.text(300, 430, "TEKAN TOMBOL [A] UNTUK MULAI", { 
+                        fontFamily: "'VT323'", 
+                        fontSize: "22px", 
+                        fill: "#ffb804" 
+                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+
+                    // --- ☁️ MATRIKS TRANSISI AWAN TOTAL ANTI-BOCOR ---
                     this.groupTransisi = this.add.group();
-                    
-                    // Jarak vertikal dirapatkan dari 130 menjadi 95 agar saling menindih erat (Overlapping)
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
-                        
-                        // Ditambah menjadi 4 awan per baris agar menutup tebal meluber ke samping
                         for (let xOffset = 0; xOffset < 4; xOffset++) {
                             let xAwal = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
                             let targetX = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
                             
                             let awanBlok = this.add.image(xAwal, y, 'cloud');
-                            awanBlok.setDisplaySize(260, 160).setDepth(100).setAlpha(1);
+                            awanBlok.setDisplaySize(260, 160).setDepth(100);
                             
                             awanBlok.setData('targetX', targetX);
                             this.groupTransisi.add(awanBlok);
@@ -301,7 +320,7 @@
                                 targets: awanBlok,
                                 x: awanBlok.getData('targetX'),
                                 duration: 750,
-                                delay: Phaser.Math.Between(0, 100), // Delay sedikit dikecilkan agar penutupan serempak
+                                delay: Phaser.Math.Between(0, 100), 
                                 ease: 'Cubic.easeInOut',
                                 onComplete: () => {
                                     awanSelesai++;
@@ -344,12 +363,9 @@
                     this.cursors = this.input.keyboard.createCursorKeys();
                     this.add.text(20, 20, "PAGE 2: JALAN RAYA MELAJU (3:4)", { fontFamily: "'VT323'", fontSize: "20px", fill: "#fff" }).setDepth(1);
 
-                    // --- ☁️ RE-CREATE GRID TRANSISI MEMBUKA SECARA MAKSIMAL ---
                     this.groupMembuka = this.add.group();
-                    
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
-                        
                         for (let xOffset = 0; xOffset < 4; xOffset++) {
                             let xTengah = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
                             let xKeluar = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
