@@ -213,9 +213,6 @@
             if (phaserGameInstance) phaserGameInstance.destroy(true);
             initLandingPage();
         } 
-        else if (pageNumber === 2) {
-            isTransitioning = true;
-        }
     }
 
     window.onload = () => { bukaPage(1); };
@@ -262,29 +259,28 @@
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
                     this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    this.add.text(300, 340, "THE WEDDING OF", { 
-                        fontFamily: "'VT323'", fontSize: "38px", fill: "#ffb804" 
+                    // 🎯 PERBAIKAN 1: JARAK BARIS LOGIS DI TENGAH MATAHARI BESAR
+                    this.add.text(300, 280, "THE WEDDING OF", { 
+                        fontFamily: "'VT323'", fontSize: "40px", fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    this.add.text(300, 380, "Mar'ie & Haiyi", { 
-                        fontFamily: "'Playfair Display'", fontSize: "60px", fill: "#ffffff", fontWeight: "bold" 
-                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(300, 360, "Mar'ie & Haiyi", { 
+                        fontFamily: "'Playfair Display'", fontSize: "60px", fill: "#000000", fontWeight: "bold" 
+                    }).setOrigin(0.5).setShadow(3, 3, '#ffb804', 0);
 
-                    this.add.text(300, 420, "TEKAN TOMBOL [A] UNTUK MULAI", { 
+                    this.add.text(300, 460, "TEKAN TOMBOL [A] UNTUK MULAI", { 
                         fontFamily: "'VT323'", fontSize: "30px", fill: "#ffb804" 
-                    }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
+                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-                    // --- ☁️ MATRIKS TRANSISI AWAN TOTAL ANTI-BOCOR ---
+                    // --- ☁️ GRID AWAN TRANSISI MENUTUP AWAL ---
                     this.groupTransisi = this.add.group();
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
                         for (let xOffset = 0; xOffset < 4; xOffset++) {
-                            let xAwal = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
+                            let xAwal = dariKiri ? (-260 - (xOffset * 85)) : (860 + (xOffset * 85));
                             let targetX = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
                             
-                            let awanBlok = this.add.image(xAwal, y, 'cloud');
-                            awanBlok.setDisplaySize(260, 160).setDepth(100);
-                            
+                            let awanBlok = this.add.image(xAwal, y, 'cloud').setDisplaySize(260, 160).setDepth(100);
                             awanBlok.setData('targetX', targetX);
                             this.groupTransisi.add(awanBlok);
                         }
@@ -294,26 +290,30 @@
                     this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
                     this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
 
+                    // Pemicu Transisi saat Tombol A Ditekan
                     if (window.virtualController.actionAPressed && !isTransitioning) {
                         window.virtualController.actionAPressed = false;
-                        bukaPage(2); 
+                        isTransitioning = true; // Kunci status agar tidak klik ganda
 
                         let totalAwan = this.groupTransisi.getLength();
                         let awanSelesai = 0;
 
+                        // Awan bergerak masuk menutup layar
                         this.groupTransisi.children.iterate(awanBlok => {
                             this.tweens.add({
                                 targets: awanBlok,
                                 x: awanBlok.getData('targetX'),
-                                duration: 750,
-                                delay: Phaser.Math.Between(0, 100), 
+                                duration: 800,
                                 ease: 'Cubic.easeInOut',
                                 onComplete: () => {
                                     awanSelesai++;
+                                    // 🎯 PERBAIKAN 2 & 3: Hancurkan landing page HANYA saat layar sudah tertutup 100% rapat
                                     if (awanSelesai === totalAwan) {
                                         if (currentMusic) currentMusic.stop();
                                         phaserGameInstance.destroy(true);
                                         phaserGameInstance = null;
+                                        
+                                        // Panggil inisialisasi game mobil
                                         initGameMobil();
                                     }
                                 }
@@ -327,9 +327,12 @@
     }
 
     // =========================================================================
-    // 🏎️ SCENE 2: GAME MOBIL RETRO (ASET TERPISAH)
+    // 🏎️ SCENE 2: GAME MOBIL RETRO (KOREKSI TOTAL JALAN LANCAR)
     // =========================================================================
     function initGameMobil() {
+        // Tandai bahwa perpindahan scene sedang memproses pembukaan awan di halaman baru
+        let sceneMobilMembuka = true;
+
         const configMobil = {
             type: Phaser.AUTO,
             width: 600, height: 800,
@@ -340,19 +343,14 @@
             },
             scene: {
                 preload: function() {
-                    // --- 🛣️ ASET LINGKUNGAN TERPISAH ---
                     this.load.image('road', 'assets/jalan_raya.png');       
                     this.load.image('grass', 'assets/rumput.png');          
-                    
-                    // --- 🚗 ASET KARAKTER & NPC ---
                     this.load.image('player_car', 'assets/mobil_kamu.png'); 
                     this.load.image('cloud', 'assets/awan.png'); 
                     this.load.image('npc_1', 'assets/mobil_npc1.png'); 
                     this.load.image('npc_2', 'assets/mobil_npc2.png'); 
                     this.load.image('npc_3', 'assets/mobil_npc3.png'); 
                     this.load.image('npc_4', 'assets/mobil_npc4.png'); 
-
-                    // --- 🪧 ASET RAMBU JALAN STORY ---
                     this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
                     this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
                     this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
@@ -360,16 +358,14 @@
                     this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
                 },
                 create: function() {
-                    // Membuat Layout Lingkungan Mandiri (Seamless Loop)
+                    // Membuat Lingkungan Mandiri di Tengah Layar
                     this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
                     this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
                     this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
 
-                    // Mobil Utama Pemain
+                    // Player Mobil Utama
                     this.player = this.physics.add.sprite(300, 700, 'player_car');
                     this.player.setCollideWorldBounds(true);
-                    
-                    // Mengunci Batasan Mobil agar Hanya Bergerak di Atas Aspal (X: 120 - 480) dengan padding aman
                     this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
 
                     this.npcGroup = this.physics.add.group();
@@ -378,19 +374,20 @@
                     this.daftarRambu = ['sign_1', 'sign_2', 'sign_3', 'sign_4', 'sign_5'];
                     this.indeksRambuSekarang = 0;
 
-                    // Pengatur Otomatis Laju Spawn Karakter
+                    // Mengaktifkan timer spawn objek berkala
                     this.time.addEvent({ delay: 2500, callback: this.spawnNPC, callbackScope: this, loop: true });
                     this.time.addEvent({ delay: 6000, callback: this.spawnRambuCerita, callbackScope: this, loop: true });
 
                     this.cursors = this.input.keyboard.createCursorKeys();
 
-                    // --- ☁️ INTEGRASI TRANSISI MEMBUKA ---
+                    // --- ☁️ ANIMASI AWAN MEMBUKA (DIBUAT MUNCUL DI ATAS MOBIL/JALAN) ---
                     this.groupMembuka = this.add.group();
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
                         for (let xOffset = 0; xOffset < 4; xOffset++) {
+                            // Papan posisi awal awan dikunci menutup rapat di tengah layar terlebih dahulu
                             let xTengah = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
-                            let xKeluar = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
+                            let xKeluar = dariKiri ? (-260 - (xOffset * 85)) : (860 + (xOffset * 85));
                             
                             let awanBlok = this.add.image(xTengah, y, 'cloud').setDisplaySize(260, 160).setDepth(100);
                             awanBlok.setData('xKeluar', xKeluar);
@@ -398,41 +395,55 @@
                         }
                     }
 
+                    // Jalankan animasi menyingkirkan awan keluar layar secara perlahan
+                    let totalAwanBuka = this.groupMembuka.getLength();
+                    let awanBukaSelesai = 0;
+                    
                     this.groupMembuka.children.iterate(awanBlok => {
                         this.tweens.add({
                             targets: awanBlok,
                             x: awanBlok.getData('xKeluar'),
-                            duration: 750,
-                            delay: Phaser.Math.Between(100, 200), 
+                            duration: 800,
+                            delay: Phaser.Math.Between(100, 300), 
                             ease: 'Cubic.easeInOut',
                             onComplete: () => {
                                 awanBlok.destroy(); 
-                                isTransitioning = false; 
+                                awanBukaSelesai++;
+                                if (awanBukaSelesai === totalAwanBuka) {
+                                    sceneMobilMembuka = false; // Membuka kunci pergerakan game mobil!
+                                    isTransitioning = false;
+                                }
                             }
                         });
                     });
                 },
                 update: function() {
-                    if (!isTransitioning) {
+                    // Game berjalan mulus jika transisi membuka awan telah usai selesai diproses
+                    if (!sceneMobilMembuka) {
                         this.road.tilePositionY -= 6; 
                         this.grassLeft.tilePositionY -= 6;
                         this.grassRight.tilePositionY -= 6;
-                    }
 
-                    if (this.cursors.left.isDown || window.virtualController.leftPressed) {
-                        this.player.setVelocityX(-280);
-                    } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
-                        this.player.setVelocityX(280);
+                        // Mekanik kendali stir mobil (Aktif setelah transisi selesai)
+                        if (this.cursors.left.isDown || window.virtualController.leftPressed) {
+                            this.player.setVelocityX(-280);
+                        } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
+                            this.player.setVelocityX(280);
+                        } else {
+                            this.player.setVelocityX(0); 
+                        }
                     } else {
-                        this.player.setVelocityX(0); 
+                        // Kunci mobil tetap diam di tengah saat proses transisi membuka langit awan berlangsung
+                        this.player.setVelocityX(0);
                     }
 
+                    // Manajemen Memori Pembersihan Objek
                     this.npcGroup.children.iterate(npc => { if (npc && npc.y > 850) npc.destroy(); });
                     this.signGroup.children.iterate(sign => { if (sign && sign.y > 850) sign.destroy(); });
                 },
 
                 spawnNPC: function() {
-                    if (isTransitioning) return;
+                    if (sceneMobilMembuka) return;
                     const koordinatJalurX = [200, 300, 400];
                     let xAcak = Phaser.Math.RND.pick(koordinatJalurX);
                     let tipeNPCX = Phaser.Math.RND.pick(['npc_1', 'npc_2', 'npc_3', 'npc_4']);
@@ -443,7 +454,7 @@
                 },
 
                 spawnRambuCerita: function() {
-                    if (isTransitioning) return;
+                    if (sceneMobilMembuka) return;
                     if (this.indeksRambuSekarang >= this.daftarRambu.length) return;
 
                     let kunciRambuSkg = this.daftarRambu[this.indeksRambuSekarang];
