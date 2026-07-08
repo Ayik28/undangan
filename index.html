@@ -176,7 +176,8 @@
 
 <script>
     let currentMusic = null;
-    let isTransitioning = false; 
+    let globalActivePage = 1;
+    let phaserGameInstance = null;
 
     window.virtualController = {
         leftPressed: false,
@@ -207,246 +208,258 @@
     // =========================================================================
     // 🌅 SCENE 1: LANDING PAGE
     // =========================================================================
-    class LandingScene extends Phaser.Scene {
-        constructor() {
-            super({ key: 'LandingScene' });
-        }
-        preload() {
-            // --- MEMUAT ASET PAGE 1 ---
-            this.load.image('custom_bg', 'assets/background_kamu.png'); 
-            this.load.image('sun', 'assets/matahari.png');
-            this.load.image('cloud', 'assets/awan.png');
-            this.load.image('bird', 'assets/burung.png');
-            this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
+    function initLandingPage() {
+        let isTransitioningLocal = false; // Menggunakan flag lokal khusus agar tidak bertabrakan dengan memori global
+        
+        const configLanding = {
+            type: Phaser.AUTO,
+            width: 600, height: 800,
+            parent: 'game-container',
+            physics: { default: 'arcade' },
+            scene: {
+                preload: function() {
+                    this.load.image('custom_bg', 'assets/background_kamu.png'); 
+                    this.load.image('sun', 'assets/matahari.png');
+                    this.load.image('cloud', 'assets/awan.png');
+                    this.load.image('bird', 'assets/burung.png');
+                    this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
+                },
+                create: function() {
+                    if (this.sound.status !== Phaser.Sound.Locked) {
+                        try {
+                            currentMusic = this.sound.add('bgm_page1', { loop: true, volume: 0.4 });
+                            currentMusic.play();
+                        } catch(e) {}
+                    }
 
-            // 🔥 FIX UTAMA: KITA PINDAHKAN SEMUA PRELOAD MOBIL KE SINI AGAR SUDAH DI-DOWNLOAD DI AWAL!
-            this.load.image('road', 'assets/jalan_raya.png');       
-            this.load.image('grass', 'assets/rumput.png');          
-            this.load.image('player_car', 'assets/mobil_kamu.png'); 
-            this.load.image('npc_1', 'assets/mobil_npc1.png'); 
-            this.load.image('npc_2', 'assets/mobil_npc2.png'); 
-            this.load.image('npc_3', 'assets/mobil_npc3.png'); 
-            this.load.image('npc_4', 'assets/mobil_npc4.png'); 
-            this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
-            this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
-            this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
-            this.load.image('sign_4', 'assets/rambu_informasi4.png'); 
-            this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
-        }
-        create() {
-            isTransitioning = false;
+                    this.add.image(300, 400, 'custom_bg').setDisplaySize(600, 800);
 
-            if (this.sound.status !== Phaser.Sound.Locked) {
-                try {
-                    currentMusic = this.sound.add('bgm_page1', { loop: true, volume: 0.4 });
-                    currentMusic.play();
-                } catch(e) {}
-            }
+                    this.clouds = this.physics.add.group();
+                    for (let i = 0; i < 6; i++) {
+                        this.clouds.create(i * 120, Phaser.Math.Between(40, 150), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
+                    }
 
-            this.add.image(300, 400, 'custom_bg').setDisplaySize(600, 800);
+                    this.birds = this.physics.add.group();
+                    for (let i = 0; i < 2; i++) {
+                        this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(100, 180), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
+                    }
 
-            this.clouds = this.physics.add.group();
-            for (let i = 0; i < 6; i++) {
-                this.clouds.create(i * 120, Phaser.Math.Between(40, 150), 'cloud').setVelocityX(Phaser.Math.Between(6, 12)).setAlpha(0.6);
-            }
+                    this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
+                    this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-            this.birds = this.physics.add.group();
-            for (let i = 0; i < 2; i++) {
-                this.birds.create(Phaser.Math.Between(-200, -50), Phaser.Math.Between(100, 180), 'bird').setScale(0.5).setVelocityX(Phaser.Math.Between(25, 40));
-            }
+                    // PENGATURAN SUSUNAN TEKS KAMU YANG SUDAH SESUAI KEINGINAN
+                    this.add.text(300, 320, "THE WEDDING OF", { 
+                        fontFamily: "'VT323'", fontSize: "38px", fill: "#ffb804" 
+                    }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-            this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
-            this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
+                    this.add.text(300, 380, "Mar'ie & Haiyi", { 
+                        fontFamily: "'Playfair Display'", fontSize: "60px", fill: "#000000", fontWeight: "bold" 
+                    }).setOrigin(0.5).setShadow(2, 2, '#ffb804', 0);
 
-            this.add.text(300, 320, "THE WEDDING OF", { 
-                fontFamily: "'VT323'", fontSize: "38px", fill: "#ffb804" 
-            }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
+                    this.add.text(300, 440, "TEKAN TOMBOL [A] UNTUK MULAI", { 
+                        fontFamily: "'VT323'", fontSize: "28px", fill: "#ffb804" 
+                    }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
 
-            this.add.text(300, 380, "Mar'ie & Haiyi", { 
-                fontFamily: "'Playfair Display'", fontSize: "60px", fill: "#000000", fontWeight: "bold" 
-            }).setOrigin(0.5).setShadow(2, 2, '#ffb804', 0);
+                    // --- ☁️ MATRIX TRANSISI AWAN MENUTUP ---
+                    this.groupTransisi = this.add.group();
+                    for (let y = 0; y <= 800; y += 95) {
+                        let dariKiri = (y % 190 === 0);
+                        for (let xOffset = 0; xOffset < 4; xOffset++) {
+                            let xAwal = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
+                            let targetX = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
+                            
+                            let awanBlok = this.add.image(xAwal, y, 'cloud');
+                            awanBlok.setDisplaySize(260, 160).setDepth(100);
+                            awanBlok.setData('targetX', targetX);
+                            this.groupTransisi.add(awanBlok);
+                        }
+                    }
+                },
+                update: function() {
+                    this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
+                    this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
 
-            this.add.text(300, 440, "TEKAN TOMBOL [A] UNTUK MULAI", { 
-                fontFamily: "'VT323'", fontSize: "28px", fill: "#ffb804" 
-            }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
+                    // Deteksi Input Tombol [A] Secara Aman
+                    if (window.virtualController.actionAPressed && !isTransitioningLocal) {
+                        window.virtualController.actionAPressed = false;
+                        isTransitioningLocal = true; 
 
-            this.groupTransisi = this.add.group();
-            for (let y = 0; y <= 800; y += 95) {
-                let dariKiri = (y % 190 === 0);
-                for (let xOffset = 0; xOffset < 4; xOffset++) {
-                    let xAwal = dariKiri ? (-180 - (xOffset * 85)) : (780 + (xOffset * 85));
-                    let targetX = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
-                    
-                    let awanBlok = this.add.image(xAwal, y, 'cloud');
-                    awanBlok.setDisplaySize(260, 160).setDepth(100);
-                    
-                    awanBlok.setData('targetX', targetX);
-                    this.groupTransisi.add(awanBlok);
+                        let totalAwan = this.groupTransisi.getLength();
+                        let awanSelesai = 0;
+
+                        this.groupTransisi.children.iterate(awanBlok => {
+                            this.tweens.add({
+                                targets: awanBlok,
+                                x: awanBlok.getData('targetX'),
+                                duration: 750,
+                                ease: 'Cubic.easeInOut',
+                                onComplete: () => {
+                                    awanSelesai++;
+                                    // 🔥 SOLUSI TOTAL: Ketika awan menutup 100% rapat, stop musik, hancurkan canvas lama, dan buka Game Mobil dengan jeda aman agar memori bersih
+                                    if (awanSelesai === totalAwan) {
+                                        if (currentMusic) currentMusic.stop();
+                                        
+                                        phaserGameInstance.destroy(true);
+                                        phaserGameInstance = null;
+
+                                        globalActivePage = 2;
+                                        
+                                        setTimeout(() => {
+                                            initGameMobil();
+                                        }, 60); // Jeda pengosongan memori WebGL browser agar anti-freeze
+                                    }
+                                }
+                            });
+                        });
+                    }
                 }
             }
-        }
-        update() {
-            this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
-            this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
-
-            if (window.virtualController.actionAPressed && !isTransitioning) {
-                window.virtualController.actionAPressed = false;
-                isTransitioning = true; 
-
-                let totalAwan = this.groupTransisi.getLength();
-                let awanSelesai = 0;
-
-                this.groupTransisi.children.iterate(awanBlok => {
-                    this.tweens.add({
-                        targets: awanBlok,
-                        x: awanBlok.getData('targetX'),
-                        duration: 750,
-                        delay: Phaser.Math.Between(0, 100), 
-                        ease: 'Cubic.easeInOut',
-                        onComplete: () => {
-                            awanSelesai++;
-                            if (awanSelesai === totalAwan) {
-                                if (currentMusic) currentMusic.stop();
-                                // Mengalihkan scene secara internal bawaan Phaser tanpa merusak canvas
-                                this.scene.start('GameMobilScene');
-                            }
-                        }
-                    });
-                });
-            }
-        }
+        };
+        phaserGameInstance = new Phaser.Game(configLanding);
     }
 
     // =========================================================================
     // 🏎️ SCENE 2: GAME MOBIL RETRO
     // =========================================================================
-    class GameMobilScene extends Phaser.Scene {
-        constructor() {
-            super({ key: 'GameMobilScene' });
-        }
-        // Fungsi preload di halaman 2 dikosongkan karena semua gambar sudah di-preload di awal game!
-        preload() {}
-        
-        create() {
-            this.sceneMobilMembuka = true;
+    function initGameMobil() {
+        let sceneMobilMembuka = true; // Flag lokal penahan laju jalan sebelum awan menyibak
 
-            this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
-            this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
-            this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
+        const configMobil = {
+            type: Phaser.AUTO,
+            width: 600, height: 800,
+            parent: 'game-container',
+            physics: { 
+                default: 'arcade',
+                arcade: { debug: false }
+            },
+            scene: {
+                preload: function() {
+                    this.load.image('road', 'assets/jalan_raya.png');       
+                    this.load.image('grass', 'assets/rumput.png');          
+                    this.load.image('player_car', 'assets/mobil_kamu.png'); 
+                    this.load.image('cloud', 'assets/awan.png'); 
+                    this.load.image('npc_1', 'assets/mobil_npc1.png'); 
+                    this.load.image('npc_2', 'assets/mobil_npc2.png'); 
+                    this.load.image('npc_3', 'assets/mobil_npc3.png'); 
+                    this.load.image('npc_4', 'assets/mobil_npc4.png'); 
+                    this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
+                    this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
+                    this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
+                    this.load.image('sign_4', 'assets/rambu_informasi4.png'); 
+                    this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
+                },
+                create: function() {
+                    // Membuat Layout Lingkungan
+                    this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
+                    this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
+                    this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
 
-            this.player = this.physics.add.sprite(300, 700, 'player_car');
-            this.player.setCollideWorldBounds(true);
-            this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
+                    // Player Mobil
+                    this.player = this.physics.add.sprite(300, 700, 'player_car');
+                    this.player.setCollideWorldBounds(true);
+                    this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
 
-            this.npcGroup = this.add.group();
-            this.signGroup = this.add.group();
+                    this.npcGroup = this.add.group();
+                    this.signGroup = this.add.group();
 
-            this.daftarRambu = ['sign_1', 'sign_2', 'sign_3', 'sign_4', 'sign_5'];
-            this.indeksRambuSekarang = 0;
+                    this.daftarRambu = ['sign_1', 'sign_2', 'sign_3', 'sign_4', 'sign_5'];
+                    this.indeksRambuSekarang = 0;
 
-            this.time.addEvent({ delay: 2500, callback: this.spawnNPC, callbackScope: this, loop: true });
-            this.time.addEvent({ delay: 6000, callback: this.spawnRambuCerita, callbackScope: this, loop: true });
+                    this.time.addEvent({ delay: 2500, callback: this.spawnNPC, callbackScope: this, loop: true });
+                    this.time.addEvent({ delay: 6000, callback: this.spawnRambuCerita, callbackScope: this, loop: true });
 
-            this.cursors = this.input.keyboard.createCursorKeys();
+                    this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.groupMembuka = this.add.group();
-            for (let y = 0; y <= 800; y += 95) {
-                let dariKiri = (y % 190 === 0);
-                for (let xOffset = 0; xOffset < 4; xOffset++) {
-                    let xTengah = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
-                    let xKeluar = dariKiri ? (-260 - (xOffset * 85)) : (860 + (xOffset * 85));
-                    
-                    let awanBlok = this.add.image(xTengah, y, 'cloud').setDisplaySize(260, 160).setDepth(100);
-                    awanBlok.setData('xKeluar', xKeluar);
-                    this.groupMembuka.add(awanBlok);
-                }
-            }
-
-            let totalAwanBuka = this.groupMembuka.getLength();
-            let awanBukaSelesai = 0;
-
-            this.groupMembuka.children.iterate(awanBlok => {
-                this.tweens.add({
-                    targets: awanBlok,
-                    x: awanBlok.getData('xKeluar'),
-                    duration: 750,
-                    delay: Phaser.Math.Between(100, 200), 
-                    ease: 'Cubic.easeInOut',
-                    onComplete: () => {
-                        awanBlok.destroy(); 
-                        awanBukaSelesai++;
-                        if (awanBukaSelesai === totalAwanBuka) {
-                            this.sceneMobilMembuka = false; 
-                            isTransitioning = false;
+                    // --- ☁️ BLOK TRANSISI AWAN MEMBUKA ---
+                    this.groupMembuka = this.add.group();
+                    for (let y = 0; y <= 800; y += 95) {
+                        let dariKiri = (y % 190 === 0);
+                        for (let xOffset = 0; xOffset < 4; xOffset++) {
+                            let xTengah = dariKiri ? (100 + (xOffset * 85)) : (500 - (xOffset * 85));
+                            let xKeluar = dariKiri ? (-260 - (xOffset * 85)) : (860 + (xOffset * 85));
+                            
+                            let awanBlok = this.add.image(xTengah, y, 'cloud').setDisplaySize(260, 160).setDepth(100);
+                            awanBlok.setData('xKeluar', xKeluar);
+                            this.groupMembuka.add(awanBlok);
                         }
                     }
-                });
-            });
-        }
-        update() {
-            if (!this.sceneMobilMembuka) {
-                this.road.tilePositionY -= 6; 
-                this.grassLeft.tilePositionY -= 6;
-                this.grassRight.tilePositionY -= 6;
 
-                if (this.cursors.left.isDown || window.virtualController.leftPressed) {
-                    this.player.setVelocityX(-280);
-                } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
-                    this.player.setVelocityX(280);
-                } else {
-                    this.player.setVelocityX(0); 
+                    let totalAwanBuka = this.groupMembuka.getLength();
+                    let awanBukaSelesai = 0;
+
+                    this.groupMembuka.children.iterate(awanBlok => {
+                        this.tweens.add({
+                            targets: awanBlok,
+                            x: awanBlok.getData('xKeluar'),
+                            duration: 750,
+                            delay: Phaser.Math.Between(100, 200), 
+                            ease: 'Cubic.easeInOut',
+                            onComplete: () => {
+                                awanBlok.destroy(); 
+                                awanBukaSelesai++;
+                                if (awanBukaSelesai === totalAwanBuka) {
+                                    sceneMobilMembuka = false; // Buka kunci gerak jalan & kontrol mobil!
+                                }
+                            }
+                        });
+                    });
+                },
+                update: function() {
+                    // Jalan dan setir mobil hanya akan berjalan jika tirai awan pembuka sudah menyingkir keluar
+                    if (!sceneMobilMembuka) {
+                        this.road.tilePositionY -= 6; 
+                        this.grassLeft.tilePositionY -= 6;
+                        this.grassRight.tilePositionY -= 6;
+
+                        if (this.cursors.left.isDown || window.virtualController.leftPressed) {
+                            this.player.setVelocityX(-280);
+                        } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
+                            this.player.setVelocityX(280);
+                        } else {
+                            this.player.setVelocityX(0); 
+                        }
+                    } else {
+                        this.player.setVelocityX(0); 
+                    }
+
+                    this.npcGroup.children.iterate(npc => { if (npc && npc.y > 850) npc.destroy(); });
+                    this.signGroup.children.iterate(sign => { if (sign && sign.y > 850) sign.destroy(); });
+                },
+
+                spawnNPC: function() {
+                    if (sceneMobilMembuka) return; 
+                    const koordinatJalurX = [200, 300, 400];
+                    let xAcak = Phaser.Math.RND.pick(koordinatJalurX);
+                    let tipeNPCX = Phaser.Math.RND.pick(['npc_1', 'npc_2', 'npc_3', 'npc_4']);
+
+                    let npc = this.physics.add.sprite(xAcak, -50, tipeNPCX);
+                    npc.setVelocityY(Phaser.Math.Between(150, 220)); 
+                    npc.setDepth(2);
+                    this.npcGroup.add(npc);
+                },
+
+                spawnRambuCerita: function() {
+                    if (sceneMobilMembuka) return; 
+                    if (this.indeksRambuSekarang >= this.daftarRambu.length) return;
+
+                    let kunciRambuSkg = this.daftarRambu[this.indeksRambuSekarang];
+                    let diKiri = (this.indeksRambuSekarang % 2 === 0);
+                    let xPosisiRambu = diKiri ? 60 : 540; 
+
+                    let rambu = this.physics.add.sprite(xPosisiRambu, -80, kunciRambuSkg);
+                    rambu.setVelocityY(360); 
+                    rambu.setDepth(1);
+                    this.signGroup.add(rambu);
+
+                    this.indeksRambuSekarang++;
                 }
-            } else {
-                this.player.setVelocityX(0); 
             }
-
-            this.npcGroup.children.iterate(npc => { if (npc && npc.y > 850) npc.destroy(); });
-            this.signGroup.children.iterate(sign => { if (sign && sign.y > 850) sign.destroy(); });
-        }
-        spawnNPC() {
-            if (this.sceneMobilMembuka) return; 
-            const koordinatJalurX = [200, 300, 400];
-            let xAcak = Phaser.Math.RND.pick(koordinatJalurX);
-            let tipeNPCX = Phaser.Math.RND.pick(['npc_1', 'npc_2', 'npc_3', 'npc_4']);
-
-            let npc = this.physics.add.sprite(xAcak, -50, tipeNPCX);
-            npc.setVelocityY(Phaser.Math.Between(150, 220)); 
-            npc.setDepth(2);
-            this.npcGroup.add(npc);
-        }
-        spawnRambuCerita() {
-            if (this.sceneMobilMembuka) return; 
-            if (this.indeksRambuSekarang >= this.daftarRambu.length) return;
-
-            let kunciRambuSkg = this.daftarRambu[this.indeksRambuSekarang];
-            let diKiri = (this.indeksRambuSekarang % 2 === 0);
-            let xPosisiRambu = diKiri ? 60 : 540; 
-
-            let rambu = this.physics.add.sprite(xPosisiRambu, -80, kunciRambuSkg);
-            rambu.setVelocityY(360); 
-            rambu.setDepth(1);
-            this.signGroup.add(rambu);
-
-            this.indeksRambuSekarang++;
-        }
+        };
+        phaserGameInstance = new Phaser.Game(configMobil);
     }
 
-    // =========================================================================
-    // INTI CONFIG ELEMEN GAME UTAMA PHASER MULTI-SCENE
-    // =========================================================================
-    const configUtama = {
-        type: Phaser.AUTO,
-        width: 600,
-        height: 800,
-        parent: 'game-container',
-        physics: { 
-            default: 'arcade',
-            arcade: { debug: false }
-        },
-        scene: [LandingScene, GameMobilScene]
-    };
-
-    window.phaserGameInstance = new Phaser.Game(configUtama);
+    // Jalankan landing page pertama kali saat website dimuat
+    window.onload = () => { initLandingPage(); };
 </script>
 </body>
 </html>
