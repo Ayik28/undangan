@@ -212,12 +212,14 @@
             super({ key: 'LandingScene' });
         }
         preload() {
+            // --- MEMUAT ASET PAGE 1 ---
             this.load.image('custom_bg', 'assets/background_kamu.png'); 
             this.load.image('sun', 'assets/matahari.png');
             this.load.image('cloud', 'assets/awan.png');
             this.load.image('bird', 'assets/burung.png');
             this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
 
+            // 🔥 FIX UTAMA: KITA PINDAHKAN SEMUA PRELOAD MOBIL KE SINI AGAR SUDAH DI-DOWNLOAD DI AWAL!
             this.load.image('road', 'assets/jalan_raya.png');       
             this.load.image('grass', 'assets/rumput.png');          
             this.load.image('player_car', 'assets/mobil_kamu.png'); 
@@ -305,8 +307,7 @@
                             awanSelesai++;
                             if (awanSelesai === totalAwan) {
                                 if (currentMusic) currentMusic.stop();
-                                globalActivePage = 2;
-                                // Pindah scene resmi bawaan Phaser
+                                // Mengalihkan scene secara internal bawaan Phaser tanpa merusak canvas
                                 this.scene.start('GameMobilScene');
                             }
                         }
@@ -323,6 +324,9 @@
         constructor() {
             super({ key: 'GameMobilScene' });
         }
+        // Fungsi preload di halaman 2 dikosongkan karena semua gambar sudah di-preload di awal game!
+        preload() {}
+        
         create() {
             this.sceneMobilMembuka = true;
 
@@ -334,7 +338,6 @@
             this.player.setCollideWorldBounds(true);
             this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
 
-            // 🛠️ PERBAIKAN STUCK: Membuat grup fisika dengan format deklarasi standar yang aman dari crash
             this.npcGroup = this.add.group();
             this.signGroup = this.add.group();
 
@@ -397,7 +400,6 @@
                 this.player.setVelocityX(0); 
             }
 
-            // Pembersihan objek luar layar menggunakan array biasa agar aman
             this.npcGroup.children.iterate(npc => { if (npc && npc.y > 850) npc.destroy(); });
             this.signGroup.children.iterate(sign => { if (sign && sign.y > 850) sign.destroy(); });
         }
@@ -407,7 +409,6 @@
             let xAcak = Phaser.Math.RND.pick(koordinatJalurX);
             let tipeNPCX = Phaser.Math.RND.pick(['npc_1', 'npc_2', 'npc_3', 'npc_4']);
 
-            // Pemuatan objek melalui factory physics scene secara langsung
             let npc = this.physics.add.sprite(xAcak, -50, tipeNPCX);
             npc.setVelocityY(Phaser.Math.Between(150, 220)); 
             npc.setDepth(2);
@@ -431,7 +432,7 @@
     }
 
     // =========================================================================
-    // KONFIGURASI ENGINE TUNGGAL
+    // INTI CONFIG ELEMEN GAME UTAMA PHASER MULTI-SCENE
     // =========================================================================
     const configUtama = {
         type: Phaser.AUTO,
