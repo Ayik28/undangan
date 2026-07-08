@@ -205,21 +205,25 @@
     }, 500);
 
     // =========================================================================
-    // 🌅 SCENE 1: LANDING PAGE (SISTEM GLOBAL PRELOAD)
+    // 🌅 SCENE 1: LANDING PAGE (DILENGKAPI DETEKTOR EROR & PLACEHOLDER)
     // =========================================================================
     class LandingScene extends Phaser.Scene {
         constructor() {
             super({ key: 'LandingScene' });
         }
         preload() {
-            // --- PEMUATAN GLOBAL PAGE 1 ---
+            // JIKA FILE BERIKUT TIDAK ADA DI GITHUB PAGES, PHASER TIDAK AKAN CRASH LAGI
+            this.load.on('loaderror', function(fileObj) {
+                console.warn("Aset eksternal belum diunggah atau salah nama: " + fileObj.key);
+            });
+
+            // Memuat file gambar & audio
             this.load.image('custom_bg', 'assets/background_kamu.png'); 
             this.load.image('sun', 'assets/matahari.png');
             this.load.image('cloud', 'assets/awan.png');
             this.load.image('bird', 'assets/burung.png');
             this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
 
-            // 🔥 STRATEGI FIX: SEBELUM PINDAH, KITA LOAD SEMUA ASET GAME MOBIL DI SINI KARENA UKURAN MEMORI KECIL
             this.load.image('road', 'assets/jalan_raya.png');       
             this.load.image('grass', 'assets/rumput.png');          
             this.load.image('player_car', 'assets/mobil_kamu.png'); 
@@ -236,7 +240,37 @@
         create() {
             isTransitioning = false;
 
-            if (this.sound.status !== Phaser.Sound.Locked) {
+            // --- 🛠️ MEMBUAT GAMBAR CADANGAN OTOMATIS JIKA FILE PNG-MU BELUM DI-UPLOAD ---
+            const buatCadangan = (key, w, h, warna) => {
+                if (!this.textures.exists(key)) {
+                    let canvasData = this.textures.createCanvas(key, w, h);
+                    let ctx = canvasData.context;
+                    ctx.fillStyle = warna;
+                    ctx.fillRect(0, 0, w, h);
+                    if(key.includes('sign') || key.includes('npc')) {
+                        ctx.fillStyle = '#ffffff'; ctx.font = '14px Arial';
+                        ctx.fillText(key.toUpperCase(), 10, h/2);
+                    }
+                    canvasData.refresh();
+                }
+            };
+            
+            // Generate asset darurat jika ada yang kosong di folder assets
+            buatCadangan('custom_bg', 600, 800, '#3a506b');
+            buatCadangan('sun', 200, 200, '#ffb804');
+            buatCadangan('cloud', 150, 90, '#ffffff');
+            buatCadangan('bird', 40, 30, '#111111');
+            buatCadangan('road', 360, 400, '#2b2b2b');
+            buatCadangan('grass', 120, 200, '#38b000');
+            buatCadangan('player_car', 50, 85, '#e63946');
+            buatCadangan('npc_1', 50, 85, '#ffb703'); buatCadangan('npc_2', 50, 85, '#023047');
+            buatCadangan('npc_3', 50, 85, '#fb8500'); buatCadangan('npc_4', 50, 85, '#8ecae6');
+            buatCadangan('sign_1', 120, 80, '#8e9aaf'); buatCadangan('sign_2', 120, 80, '#8e9aaf');
+            buatCadangan('sign_3', 120, 80, '#8e9aaf'); buatCadangan('sign_4', 120, 80, '#8e9aaf');
+            buatCadangan('sign_5', 120, 80, '#8e9aaf');
+
+            // Jalankan musik jika file audio valid
+            if (this.sound.status !== Phaser.Sound.Locked && this.cache.audio.exists('bgm_page1')) {
                 try {
                     currentMusic = this.sound.add('bgm_page1', { loop: true, volume: 0.4 });
                     currentMusic.play();
@@ -258,12 +292,12 @@
             this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
             this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-            // JARAK BARIS LONGGAR DAN PROPORSIONAL PAS DI TENGAH LAYAR
+            // Pengaturan susunan teks vertikal longgar
             this.add.text(300, 260, "THE WEDDING OF", { fontFamily: "'VT323'", fontSize: "26px", fill: "#ffb804" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
             this.add.text(300, 360, "Mar'ie & Haiyi", { fontFamily: "'Playfair Display'", fontSize: "44px", fill: "#ffffff", fontWeight: "bold" }).setOrigin(0.5).setShadow(3, 3, '#000', 0);
             this.add.text(300, 460, "TEKAN TOMBOL [A] UNTUK MULAI", { fontFamily: "'VT323'", fontSize: "22px", fill: "#ffb804" }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
 
-            // Membuat grid awan penutup
+            // Matrix awan transisi penutup
             this.groupTransisi = this.add.group();
             for (let y = 0; y <= 800; y += 95) {
                 let dariKiri = (y % 190 === 0);
@@ -298,7 +332,7 @@
                             awanSelesai++;
                             if (awanSelesai === totalAwan) {
                                 if (currentMusic) currentMusic.stop();
-                                // Pindah scene bawaan Phaser dengan aman tanpa eror memori
+                                // Lompat scene internal tanpa kedipan eror
                                 this.scene.start('GameMobilScene');
                             }
                         }
@@ -316,15 +350,13 @@
             super({ key: 'GameMobilScene' });
         }
         create() {
-            // Kunci pengendali laju, nonaktif sampai tirai terbuka penuh
             this.sceneMobilMembuka = true;
 
-            // Membuat background jalan 3:4 yang terpisah
+            // Membangun arena jalan raya bermodel modular
             this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
             this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
             this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
 
-            // Spawn karakter utama
             this.player = this.physics.add.sprite(300, 700, 'player_car');
             this.player.setCollideWorldBounds(true);
             this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
@@ -335,13 +367,12 @@
             this.daftarRambu = ['sign_1', 'sign_2', 'sign_3', 'sign_4', 'sign_5'];
             this.indeksRambuSekarang = 0;
 
-            // Atur interval spawn NPC & Rambu informasi
             this.time.addEvent({ delay: 2500, callback: this.spawnNPC, callbackScope: this, loop: true });
             this.time.addEvent({ delay: 6000, callback: this.spawnRambuCerita, callbackScope: this, loop: true });
 
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            // --- ☁️ MATRIKS TRANSISI AWAN MEMBUKA (PASTI MUNCUL KARENA GAMBAR SUDAH SIAP DI MEMORI) ---
+            // --- ☁️ MATRIKS TRANSISI AWAN MEMBUKA ---
             this.groupMembuka = this.add.group();
             for (let y = 0; y <= 800; y += 95) {
                 let dariKiri = (y % 190 === 0);
@@ -369,7 +400,7 @@
                         awanBlok.destroy(); 
                         awanBukaSelesai++;
                         if (awanBukaSelesai === totalAwanBuka) {
-                            this.sceneMobilMembuka = false; // Buka kunci permainan!
+                            this.sceneMobilMembuka = false; // Buka kunci kendali permainan!
                             isTransitioning = false;
                         }
                     }
@@ -378,12 +409,10 @@
         }
         update() {
             if (!this.sceneMobilMembuka) {
-                // Background aspal & rumput bergulung bersamaan
                 this.road.tilePositionY -= 6; 
                 this.grassLeft.tilePositionY -= 6;
                 this.grassRight.tilePositionY -= 6;
 
-                // Logika Stir Kendali Ganda
                 if (this.cursors.left.isDown || window.virtualController.leftPressed) {
                     this.player.setVelocityX(-280);
                 } else if (this.cursors.right.isDown || window.virtualController.rightPressed) {
@@ -425,7 +454,7 @@
     }
 
     // =========================================================================
-    // CONFIG GAME UTAMA
+    // INITIALIZATION ENGINE
     // =========================================================================
     const configUtama = {
         type: Phaser.AUTO,
