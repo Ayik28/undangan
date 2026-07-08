@@ -206,10 +206,10 @@
     }, 500);
 
     // =========================================================================
-    // 🌅 SCENE 1: LANDING PAGE
+    // 🌅 SCENE 1: LANDING PAGE (SISTEM GLOBAL PRELOAD TERPADU)
     // =========================================================================
     function initLandingPage() {
-        let isTransitioningLocal = false; // Menggunakan flag lokal khusus agar tidak bertabrakan dengan memori global
+        let isTransitioningLocal = false; 
         
         const configLanding = {
             type: Phaser.AUTO,
@@ -218,11 +218,26 @@
             physics: { default: 'arcade' },
             scene: {
                 preload: function() {
+                    // Memuat Aset Page 1
                     this.load.image('custom_bg', 'assets/background_kamu.png'); 
                     this.load.image('sun', 'assets/matahari.png');
                     this.load.image('cloud', 'assets/awan.png');
                     this.load.image('bird', 'assets/burung.png');
                     this.load.audio('bgm_page1', 'assets/audio_page1.mp3');
+
+                    // 🔥 STRATEGI EMAS: Muat semua aset jalan raya di sini agar tersimpan di cache sejak awal!
+                    this.load.image('road', 'assets/jalan_raya.png');       
+                    this.load.image('grass', 'assets/rumput.png');          
+                    this.load.image('player_car', 'assets/mobil_kamu.png'); 
+                    this.load.image('npc_1', 'assets/mobil_npc1.png'); 
+                    this.load.image('npc_2', 'assets/mobil_npc2.png'); 
+                    this.load.image('npc_3', 'assets/mobil_npc3.png'); 
+                    this.load.image('npc_4', 'assets/mobil_npc4.png'); 
+                    this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
+                    this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
+                    this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
+                    this.load.image('sign_4', 'assets/rambu_informasi4.png'); 
+                    this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
                 },
                 create: function() {
                     if (this.sound.status !== Phaser.Sound.Locked) {
@@ -247,7 +262,6 @@
                     this.sun = this.add.sprite(300, 390, 'sun').setScale(1.1);
                     this.tweens.add({ targets: this.sun, scale: { from: 1.08, to: 1.12 }, duration: 3500, yoyo: true, repeat: -1 });
 
-                    // PENGATURAN SUSUNAN TEKS KAMU YANG SUDAH SESUAI KEINGINAN
                     this.add.text(300, 320, "THE WEDDING OF", { 
                         fontFamily: "'VT323'", fontSize: "38px", fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(2, 2, '#000', 0);
@@ -260,7 +274,6 @@
                         fontFamily: "'VT323'", fontSize: "28px", fill: "#ffb804" 
                     }).setOrigin(0.5).setShadow(1, 1, '#000', 0);
 
-                    // --- ☁️ MATRIX TRANSISI AWAN MENUTUP ---
                     this.groupTransisi = this.add.group();
                     for (let y = 0; y <= 800; y += 95) {
                         let dariKiri = (y % 190 === 0);
@@ -279,7 +292,6 @@
                     this.clouds.children.iterate(cl => { if (cl && cl.x > 650) cl.x = -50; });
                     this.birds.children.iterate(b => { if (b && b.x > 650) b.x = -50; });
 
-                    // Deteksi Input Tombol [A] Secara Aman
                     if (window.virtualController.actionAPressed && !isTransitioningLocal) {
                         window.virtualController.actionAPressed = false;
                         isTransitioningLocal = true; 
@@ -295,18 +307,16 @@
                                 ease: 'Cubic.easeInOut',
                                 onComplete: () => {
                                     awanSelesai++;
-                                    // 🔥 SOLUSI TOTAL: Ketika awan menutup 100% rapat, stop musik, hancurkan canvas lama, dan buka Game Mobil dengan jeda aman agar memori bersih
                                     if (awanSelesai === totalAwan) {
                                         if (currentMusic) currentMusic.stop();
                                         
                                         phaserGameInstance.destroy(true);
                                         phaserGameInstance = null;
-
                                         globalActivePage = 2;
                                         
                                         setTimeout(() => {
                                             initGameMobil();
-                                        }, 60); // Jeda pengosongan memori WebGL browser agar anti-freeze
+                                        }, 60); 
                                     }
                                 }
                             });
@@ -322,7 +332,7 @@
     // 🏎️ SCENE 2: GAME MOBIL RETRO
     // =========================================================================
     function initGameMobil() {
-        let sceneMobilMembuka = true; // Flag lokal penahan laju jalan sebelum awan menyibak
+        let sceneMobilMembuka = true; 
 
         const configMobil = {
             type: Phaser.AUTO,
@@ -333,28 +343,14 @@
                 arcade: { debug: false }
             },
             scene: {
-                preload: function() {
-                    this.load.image('road', 'assets/jalan_raya.png');       
-                    this.load.image('grass', 'assets/rumput.png');          
-                    this.load.image('player_car', 'assets/mobil_kamu.png'); 
-                    this.load.image('cloud', 'assets/awan.png'); 
-                    this.load.image('npc_1', 'assets/mobil_npc1.png'); 
-                    this.load.image('npc_2', 'assets/mobil_npc2.png'); 
-                    this.load.image('npc_3', 'assets/mobil_npc3.png'); 
-                    this.load.image('npc_4', 'assets/mobil_npc4.png'); 
-                    this.load.image('sign_1', 'assets/rambu_informasi1.png'); 
-                    this.load.image('sign_2', 'assets/rambu_informasi2.png'); 
-                    this.load.image('sign_3', 'assets/rambu_informasi3.png'); 
-                    this.load.image('sign_4', 'assets/rambu_informasi4.png'); 
-                    this.load.image('sign_5', 'assets/rambu_informasi5.png'); 
-                },
+                // 🔥 KUNCI UTAMA: Sengaja dikosongkan karena semua gambar sudah sukses terunduh dari awal website dibuka!
+                preload: function() {}, 
+                
                 create: function() {
-                    // Membuat Layout Lingkungan
                     this.grassLeft = this.add.tileSprite(60, 400, 120, 800, 'grass');
                     this.road = this.add.tileSprite(300, 400, 360, 800, 'road');
                     this.grassRight = this.add.tileSprite(540, 400, 120, 800, 'grass');
 
-                    // Player Mobil
                     this.player = this.physics.add.sprite(300, 700, 'player_car');
                     this.player.setCollideWorldBounds(true);
                     this.player.body.setBoundsRectangle(new Phaser.Geometries.Rectangle(140, 0, 320, 800));
@@ -398,14 +394,13 @@
                                 awanBlok.destroy(); 
                                 awanBukaSelesai++;
                                 if (awanBukaSelesai === totalAwanBuka) {
-                                    sceneMobilMembuka = false; // Buka kunci gerak jalan & kontrol mobil!
+                                    sceneMobilMembuka = false; // Membuka gerak jalanan dan menyalakan fungsi stir!
                                 }
                             }
                         });
                     });
                 },
                 update: function() {
-                    // Jalan dan setir mobil hanya akan berjalan jika tirai awan pembuka sudah menyingkir keluar
                     if (!sceneMobilMembuka) {
                         this.road.tilePositionY -= 6; 
                         this.grassLeft.tilePositionY -= 6;
@@ -458,7 +453,6 @@
         phaserGameInstance = new Phaser.Game(configMobil);
     }
 
-    // Jalankan landing page pertama kali saat website dimuat
     window.onload = () => { initLandingPage(); };
 </script>
 </body>
